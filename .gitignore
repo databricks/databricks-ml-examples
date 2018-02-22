@@ -1,2 +1,5 @@
 *.class
 *.log
+
+_SUCCESS
+.DS_Store
