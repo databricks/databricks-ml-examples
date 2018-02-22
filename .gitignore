@@ -3,3 +3,5 @@
 
 _SUCCESS
 .DS_Store
+.idea
+model-export-demo/target

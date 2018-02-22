@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-rm -rf ~/.m2/repository/com/databricks/dbml-local/
+rm -r ~/.m2/repository/com/databricks/dbml-local/
 
 mvn clean
 mvn compile
