@@ -26,7 +26,7 @@
     <dependency>
       <groupId>com.databricks</groupId>
       <artifactId>dbml-local</artifactId>
-      <version>0.2.3-spark2.2</version>
+      <version>0.3.0-spark2.3</version>
     </dependency>
 
     <!-- Dependency for unit tests to run example apps -->
