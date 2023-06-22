@@ -1,4 +1,8 @@
-# Demo application for Databricks Model Export
+# [DEPRECATED] Demo application for Databricks Model Export
+
+> **Warning**
+Databricks ML Model Export is deprecated and removed from Databricks Runtime 6.0 and above.
+
 
 This repository contains demos showing how to export Apache Spark ML models using [Databricks ML Model Export](https://docs.databricks.com/spark/latest/mllib/index.html)
 and use them in your own application.
