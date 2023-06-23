@@ -15,7 +15,7 @@ limitations under the License.
 -->
 
 
-# Example notebooks for state of art (SOTA) large language models (LLM)
+# Example notebooks for using LLMs on Databricks
 - Text generation following instructions
 - Text embeddings
 - Transcription (speech to text)
