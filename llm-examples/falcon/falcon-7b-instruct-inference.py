@@ -19,10 +19,6 @@
 
 # COMMAND ----------
 
-dbutils.library.restartPython()
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ## Inference
 # MAGIC The below snippets are adapted from [the model card of falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct). The example in the model card should also work on Databricks with the same environment.
@@ -45,12 +41,15 @@ pipeline = transformers.pipeline(
     torch_dtype=torch.bfloat16,
     trust_remote_code=True,
     device_map="auto",
-    revision="9f16e66a0235c4ba24e321e3be86dd347a7911a0", # it is a suggested practice to pin the revision commit hash
+    revision="9f16e66a0235c4ba24e321e3be86dd347a7911a0", # it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of falcon-7b-instruct in https://huggingface.co/tiiuae/falcon-7b-instruct/commits/main
 )
 
 # COMMAND ----------
 
-# Define prompt template, see why we need this format: http://fastml.com/how-to-train-your-own-chatgpt-alpaca-style-part-one/
+# Define prompt template, the format below is from: http://fastml.com/how-to-train-your-own-chatgpt-alpaca-style-part-one/
+
+# Prompt templates as follows could guide the model to follow instructions and respond to the input, and empirically it turns out to make Falcon models produce better responses
+
 INSTRUCTION_KEY = "### Instruction:"
 RESPONSE_KEY = "### Response:"
 INTRO_BLURB = "Below is an instruction that describes a task. Write a response that appropriately completes the request."
@@ -74,7 +73,9 @@ def gen_text(prompt, use_template=False, **kwargs):
     else:
       full_prompt = prompt
     
-    # configure text generation kwargs
+    # configure text generation arguments, see common configurable args here: https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
+
+    # the default max length is pretty small (20), which would cut the generated output in the middle, so it's necessary to increase the threshold to the complete response
     if "max_new_tokens" not in kwargs:
         kwargs["max_new_tokens"] = 512
     
@@ -101,17 +102,8 @@ print(result)
 
 # COMMAND ----------
 
-result = gen_text("What is a large language model?", temperature=0.5)
-print(result)
-
-# COMMAND ----------
-
-result = gen_text("What is a large language model?", max_new_tokens=20)
-print(result)
-
-# COMMAND ----------
-
-result = gen_text("What is a large language model?", use_template=True)
+# Use args such as temperature and max_new_tokens to control text generation
+result = gen_text("What is a large language model?", temperature=0.5, max_new_tokens=100, use_template=True)
 print(result)
 
 # COMMAND ----------
@@ -329,19 +321,18 @@ result = mlflow.register_model(
 
 # MAGIC %pip install -q -U torch==2.0.1
 # MAGIC %pip install -q einops==0.6.1
-# MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
 
 import mlflow
-loaded_model = mlflow.pyfunc.load_model(f"models:/falcon-7b-instruct/latest")
-
-# COMMAND ----------
-
 import pandas as pd
 
+loaded_model = mlflow.pyfunc.load_model(f"models:/falcon-7b-instruct/latest")
+
 # Make a prediction using the loaded model
-input_example = pd.DataFrame({"prompt":["what is ML?"], "temperature": [0.1],"max_new_tokens": [100]})
+input_example = pd.DataFrame(
+    {"prompt": ["what is ML?"], "temperature": [0.1], "max_new_tokens": [100]}
+)
 loaded_model.predict(input_example)
 
 # COMMAND ----------
