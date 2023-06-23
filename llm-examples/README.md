@@ -16,10 +16,6 @@ limitations under the License.
 
 
 # Example notebooks for state of art (SOTA) large language models (LLM)
-
-This repository contains demos showing how to export Apache Spark ML models using [Databricks ML Model Export](https://docs.databricks.com/spark/latest/mllib/index.html)
-and use them in your own application.
-
 - Text generation following instructions
 - Text embeddings
 - Transcription (speech to text)
