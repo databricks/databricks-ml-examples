@@ -69,25 +69,23 @@ PROMPT_FOR_GENERATION_FORMAT = """{intro}
 # Define parameters to generate text
 def gen_text(prompt, use_template=False, **kwargs):
     if use_template:
-      full_prompt = PROMPT_FOR_GENERATION_FORMAT.format(instruction=prompt)
+        full_prompt = PROMPT_FOR_GENERATION_FORMAT.format(instruction=prompt)
     else:
-      full_prompt = prompt
-    
-    # configure text generation arguments, see common configurable args here: https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
+        full_prompt = prompt
 
     # the default max length is pretty small (20), which would cut the generated output in the middle, so it's necessary to increase the threshold to the complete response
     if "max_new_tokens" not in kwargs:
         kwargs["max_new_tokens"] = 512
-    
-    kwargs.update({
-      'do_sample': True,
-      'use_cache': True,
-      'num_return_sequences': 1,
-      'pad_token_id': tokenizer.eos_token_id,
-      'eos_token_id': tokenizer.eos_token_id
-    })
 
-    output = pipeline(full_prompt, **kwargs)[0]['generated_text']
+    # configure other text generation arguments, see common configurable args here: https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
+    kwargs.update(
+        {
+            "pad_token_id": tokenizer.eos_token_id,  # Hugging Face sets pad_token_id to eos_token_id by default; setting here to not see redundant message
+            "eos_token_id": tokenizer.eos_token_id,
+        }
+    )
+
+    output = pipeline(full_prompt, **kwargs)[0]["generated_text"]
     return output
 
 # COMMAND ----------
@@ -138,9 +136,6 @@ def batch_gen_text(prompts, use_template=False, **kwargs):
 
     kwargs.update(
         {
-            "do_sample": True,
-            "use_cache": True,
-            "num_return_sequences": 1,
             "pad_token_id": tokenizer.eos_token_id,
             "eos_token_id": tokenizer.eos_token_id,
         }
@@ -196,7 +191,7 @@ for output in results:
 from huggingface_hub import snapshot_download
 
 # If the model has been downloaded in previous cells, this will not repetitively download large model files, but only the remaining files in the repo
-snapshot_location = snapshot_download(repo_id="tiiuae/falcon-7b-instruct",  ignore_patterns="coreml/*")
+snapshot_location = snapshot_download(repo_id="tiiuae/falcon-7b-instruct",  ignore_patterns="coreml/*", revision="9f16e66a0235c4ba24e321e3be86dd347a7911a0")
 
 # COMMAND ----------
 
@@ -285,6 +280,7 @@ input_example=pd.DataFrame({
             "max_new_tokens": [100]})
 
 # Log the model with its details such as artifacts, pip requirements and input example
+# This may take about 4 minutes to complete
 with mlflow.start_run() as run:  
     mlflow.pyfunc.log_model(
         "model",
@@ -303,6 +299,7 @@ with mlflow.start_run() as run:
 # COMMAND ----------
 
 # Register model in MLflow Model Registry
+# This may take 7 minutes to complete
 result = mlflow.register_model(
     "runs:/"+run.info.run_id+"/model",
     name="falcon-7b-instruct",
@@ -330,10 +327,13 @@ import pandas as pd
 loaded_model = mlflow.pyfunc.load_model(f"models:/falcon-7b-instruct/latest")
 
 # Make a prediction using the loaded model
-input_example = pd.DataFrame(
-    {"prompt": ["what is ML?"], "temperature": [0.1], "max_new_tokens": [100]}
+loaded_model.predict(
+    {
+        "prompt": ["What is ML?"],
+        "temperature": [0.1],
+        "max_new_tokens": [100],
+    }
 )
-loaded_model.predict(input_example)
 
 # COMMAND ----------
 
