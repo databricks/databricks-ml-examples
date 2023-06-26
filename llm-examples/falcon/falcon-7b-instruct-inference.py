@@ -299,12 +299,19 @@ result = mlflow.register_model(
 # MAGIC ### Load the model from model registry
 # MAGIC Assume that the below code is run separately or after the memory cache is cleared.
 # MAGIC
-# MAGIC You can clear the GPU memory by "Detach & re-attach" the notebook, and re-install the Python libraries.
+# MAGIC If it's run in a separate notebook, make sure to install the Python libraries before loading from MLflow.
+# MAGIC ```
+# MAGIC %pip install -q -U torch==2.0.1
+# MAGIC %pip install -q einops==0.6.1
+# MAGIC ```
 
 # COMMAND ----------
 
-# MAGIC %pip install -q -U torch==2.0.1
-# MAGIC %pip install -q einops==0.6.1
+# Clear GPU memory
+
+from numba import cuda
+device = cuda.get_current_device()
+device.reset()
 
 # COMMAND ----------
 
