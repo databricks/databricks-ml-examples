@@ -196,6 +196,8 @@ snapshot_location = snapshot_download(repo_id="tiiuae/falcon-7b-instruct",  igno
 # COMMAND ----------
 
 import mlflow
+import torch
+import transformers
 
 # Define PythonModel to log with mlflow.pyfunc.log_model
 
@@ -234,14 +236,10 @@ class Falcon(mlflow.pyfunc.PythonModel):
         {RESPONSE_KEY}
         """
 
-    def predict(self, context, model_input):
+    def _generate_response(self, prompt, temperature, max_new_tokens):
         """
-        This method generates prediction for the given input.
+        This method generates prediction for a single input.
         """
-        prompt = model_input["prompt"][0]
-        temperature = model_input.get("temperature", [1.0])[0]
-        max_new_tokens = model_input.get("max_new_tokens", [100])[0]
-
         # Build the prompt
         prompt = self._build_prompt(prompt)
 
@@ -256,7 +254,23 @@ class Falcon(mlflow.pyfunc.PythonModel):
         prompt_length = len(self.tokenizer.encode(prompt, return_tensors='pt')[0])
         generated_response = self.tokenizer.decode(output[0][prompt_length:], skip_special_tokens=True)
 
-        return [generated_response]
+        return generated_response
+      
+    def predict(self, context, model_input):
+        """
+        This method generates prediction for the given input.
+        """
+
+        outputs = []
+
+        for i in range(len(model_input)):
+          prompt = model_input["prompt"][i]
+          temperature = model_input.get("temperature", [1.0])[i]
+          max_new_tokens = model_input.get("max_new_tokens", [100])[i]
+
+          outputs.append(self._generate_response(prompt, temperature, max_new_tokens))
+      
+        return outputs
 
 # COMMAND ----------
 
@@ -302,7 +316,7 @@ with mlflow.start_run() as run:
 # This may take 7 minutes to complete
 result = mlflow.register_model(
     "runs:/"+run.info.run_id+"/model",
-    name="falcon-7b-instruct",
+    name="falcon-7b-instruct-demo",
     await_registration_for=600,
 )
 
@@ -312,7 +326,7 @@ result = mlflow.register_model(
 # MAGIC ### Load the model from model registry
 # MAGIC Assume that the below code is run separately or after the memory cache is cleared.
 # MAGIC
-# MAGIC You can clear the GPU memory by "Detach & re-attach" the notebook.
+# MAGIC You can clear the GPU memory by "Detach & re-attach" the notebook, and re-install the Python libraries.
 
 # COMMAND ----------
 
@@ -324,14 +338,14 @@ result = mlflow.register_model(
 import mlflow
 import pandas as pd
 
-loaded_model = mlflow.pyfunc.load_model(f"models:/falcon-7b-instruct/latest")
+loaded_model = mlflow.pyfunc.load_model(f"models:/falcon-7b-instruct-demo/latest")
 
 # Make a prediction using the loaded model
 loaded_model.predict(
     {
-        "prompt": ["What is ML?"],
-        "temperature": [0.1],
-        "max_new_tokens": [100],
+        "prompt": ["What is ML?", "What is large language model?"],
+        "temperature": [0.1, 0.5],
+        "max_new_tokens": [100, 100],
     }
 )
 
