@@ -9,11 +9,6 @@
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ## Install required libraries
-
-# COMMAND ----------
-
 # MAGIC %pip install -q -U torch==2.0.1
 # MAGIC %pip install -q einops==0.6.1
 
@@ -67,12 +62,18 @@ PROMPT_FOR_GENERATION_FORMAT = """{intro}
 # COMMAND ----------
 
 # Define parameters to generate text
-def gen_text(prompt, use_template=False, **kwargs):
+def gen_text(prompts, use_template=False, **kwargs):
     if use_template:
-        full_prompt = PROMPT_FOR_GENERATION_FORMAT.format(instruction=prompt)
+        full_prompts = [
+            PROMPT_FOR_GENERATION_FORMAT.format(instruction=prompt)
+            for prompt in prompts
+        ]
     else:
-        full_prompt = prompt
+        full_prompts = prompts
 
+    if "batch_size" not in kwargs:
+        kwargs["batch_size"] = 1
+    
     # the default max length is pretty small (20), which would cut the generated output in the middle, so it's necessary to increase the threshold to the complete response
     if "max_new_tokens" not in kwargs:
         kwargs["max_new_tokens"] = 512
@@ -85,8 +86,10 @@ def gen_text(prompt, use_template=False, **kwargs):
         }
     )
 
-    output = pipeline(full_prompt, **kwargs)[0]["generated_text"]
-    return output
+    outputs = pipeline(full_prompts, **kwargs)
+    outputs = [out[0]["generated_text"] for out in outputs]
+
+    return outputs
 
 # COMMAND ----------
 
@@ -95,14 +98,14 @@ def gen_text(prompt, use_template=False, **kwargs):
 
 # COMMAND ----------
 
-result = gen_text("What is a large language model?")
-print(result)
+results = gen_text(["What is a large language model?"])
+print(results[0])
 
 # COMMAND ----------
 
 # Use args such as temperature and max_new_tokens to control text generation
-result = gen_text("What is a large language model?", temperature=0.5, max_new_tokens=100, use_template=True)
-print(result)
+results = gen_text(["What is a large language model?"], temperature=0.5, max_new_tokens=100, use_template=True)
+print(results[0])
 
 # COMMAND ----------
 
@@ -114,37 +117,6 @@ print(result)
 # Required tokenizer setting for batch inference
 pipeline.tokenizer.pad_token_id = tokenizer.eos_token_id
 pipeline.tokenizer.padding_side = 'left'
-
-# COMMAND ----------
-
-# Define parameters to generate text
-def batch_gen_text(prompts, use_template=False, **kwargs):
-    if use_template:
-        full_prompts = [
-            PROMPT_FOR_GENERATION_FORMAT.format(instruction=prompt)
-            for prompt in prompts
-        ]
-    else:
-        full_prompts = prompts
-
-    # configure text generation kwargs
-    if "max_new_tokens" not in kwargs:
-        kwargs["max_new_tokens"] = 512
-
-    if "batch_size" not in kwargs:
-        kwargs["batch_size"] = 8
-
-    kwargs.update(
-        {
-            "pad_token_id": tokenizer.eos_token_id,
-            "eos_token_id": tokenizer.eos_token_id,
-        }
-    )
-
-    outputs = pipeline(full_prompts, **kwargs)
-    outputs = [out[0]["generated_text"] for out in outputs]
-
-    return outputs
 
 # COMMAND ----------
 
@@ -170,7 +142,8 @@ inputs = [
 
 # COMMAND ----------
 
-results = batch_gen_text(inputs, use_template=True)
+# Set batch size
+results = gen_text(inputs, use_template=True, batch_size=8)
 
 for output in results:
   print(output)
