@@ -43,8 +43,6 @@ class MPT(mlflow.pyfunc.PythonModel):
             context.artifacts['repository'], 
             trust_remote_code=True
         )
-        # support for flast-attn and openai-triton is coming soon
-        # config.attn_config['attn_impl'] = 'triton'
         
         self.model = transformers.AutoModelForCausalLM.from_pretrained(
             context.artifacts['repository'], 
@@ -141,31 +139,12 @@ with mlflow.start_run() as run:
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Load the model from MLFlow and run batch inference.
-
-# COMMAND ----------
-
-import mlflow
-import pandas as pd
-logged_model = "runs:/"+run.info.run_id+"/model"
-
-# Load model as a PyFuncModel.
-loaded_model = mlflow.pyfunc.load_model(logged_model)
-
-# Predict on a Pandas DataFrame.
-
-input_example=pd.DataFrame({"prompt":["what is ML?", "Name 10 colors."], "temperature": [0.5, 0.5],"max_tokens": [100, 100]})
-print(loaded_model.predict(input_example))
-
-# COMMAND ----------
-
-# MAGIC %md
 # MAGIC ### Register the model
 
 # COMMAND ----------
 
 # Register model in MLflow Model Registry
-# This may take 7 minutes to complete
+# This may take about 6 minutes to complete
 result = mlflow.register_model(
     "runs:/"+run.info.run_id+"/model",
     name="mpt-7b-instruct",
@@ -177,26 +156,7 @@ result = mlflow.register_model(
 # MAGIC %md
 # MAGIC ### Load the model from model registry
 # MAGIC Assume that the below code is run separately or after the memory cache is cleared.
-# MAGIC You need to cleanup the GPU memory.
-
-# COMMAND ----------
-
-!pip install pynvml
-
-# COMMAND ----------
-
-from pynvml import * 
-def print_gpu_utilization(): 
-  nvmlInit() 
-  handle = nvmlDeviceGetHandleByIndex(0) 
-  info = nvmlDeviceGetMemoryInfo(handle)
-  print(f"GPU memory occupied: {info.used//1024**2} MB.") 
-
-print_gpu_utilization() 
-from numba import cuda 
-device = cuda.get_current_device() 
-device.reset() 
-print_gpu_utilization()
+# MAGIC You may need to cleanup the GPU memory.
 
 # COMMAND ----------
 
