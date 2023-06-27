@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Load and Inference MPT-7B model on Databricks
+# MAGIC # Load and Inference MPT-7B model with MLFlow on Databricks
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.2 GPU ML Runtime
@@ -27,6 +27,7 @@ import numpy as np
 import transformers
 import mlflow
 import torch
+import accelerate
 
 class MPT(mlflow.pyfunc.PythonModel):
     def load_context(self, context):
@@ -97,7 +98,7 @@ class MPT(mlflow.pyfunc.PythonModel):
 from huggingface_hub import snapshot_download
 
 # If the model has been downloaded in previous cells, this will not repetitively download large model files, but only the remaining files in the repo
-model_location = snapshot_download(repo_id="mosaicml/mpt-7b-instruct", cache_dir="/local_disk0/.cache/huggingface/")
+model_location = snapshot_download(repo_id="mosaicml/mpt-7b-instruct", cache_dir="/local_disk0/.cache/huggingface/", revision="bbe7a55d70215e16c00c1825805b81e4badb57d7")
 
 # COMMAND ----------
 
@@ -130,7 +131,9 @@ with mlflow.start_run() as run:
         "model",
         python_model=MPT(),
         artifacts={'repository' : model_location},
-        pip_requirements=["torch", "transformers", "accelerate", "einops", "sentencepiece"],
+        pip_requirements=[f"torch=={torch.__version__}", 
+                          f"transformers=={transformers.__version__}", 
+                          f"accelerate=={accelerate.__version__}", "einops", "sentencepiece"],
         input_example=pd.DataFrame({"prompt":["what is ML?"], "temperature": [0.5],"max_tokens": [100]}),
         signature=signature
     )
@@ -153,3 +156,57 @@ loaded_model = mlflow.pyfunc.load_model(logged_model)
 
 input_example=pd.DataFrame({"prompt":["what is ML?", "Name 10 colors."], "temperature": [0.5, 0.5],"max_tokens": [100, 100]})
 print(loaded_model.predict(input_example))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Register the model
+
+# COMMAND ----------
+
+# Register model in MLflow Model Registry
+# This may take 7 minutes to complete
+result = mlflow.register_model(
+    "runs:/"+run.info.run_id+"/model",
+    name="mpt-7b-instruct",
+    await_registration_for=1000,
+)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Load the model from model registry
+# MAGIC Assume that the below code is run separately or after the memory cache is cleared.
+# MAGIC You need to cleanup the GPU memory.
+
+# COMMAND ----------
+
+!pip install pynvml
+
+# COMMAND ----------
+
+from pynvml import * 
+def print_gpu_utilization(): 
+  nvmlInit() 
+  handle = nvmlDeviceGetHandleByIndex(0) 
+  info = nvmlDeviceGetMemoryInfo(handle)
+  print(f"GPU memory occupied: {info.used//1024**2} MB.") 
+
+print_gpu_utilization() 
+from numba import cuda 
+device = cuda.get_current_device() 
+device.reset() 
+print_gpu_utilization()
+
+# COMMAND ----------
+
+import mlflow
+import pandas as pd
+loaded_model = mlflow.pyfunc.load_model(f"models:/mpt-7b-instruct/latest")
+
+input_example=pd.DataFrame({"prompt":["what is ML?", "Name 10 colors."], "temperature": [0.5, 0.2],"max_tokens": [100, 200]})
+print(loaded_model.predict(input_example))
+
+# COMMAND ----------
+
+

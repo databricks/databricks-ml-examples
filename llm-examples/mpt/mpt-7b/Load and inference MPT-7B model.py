@@ -39,7 +39,7 @@ generator = transformers.pipeline("text-generation",
                                   model=model, 
                                   config=config, 
                                   tokenizer=tokenizer,
-                                  torch_dtype=torch.float16,
+                                  torch_dtype=torch.bfloat16,
                                   device=0)
 
 # COMMAND ----------
@@ -68,7 +68,10 @@ def generate_text(prompt, **kwargs):
 
 # COMMAND ----------
 
-question = """
-What is a large language model?
-"""
+question = "What is a large language model?"
 print(generate_text(question))
+
+# COMMAND ----------
+
+questions = ["what is ML?", "Name 10 colors."]
+print(generate_text(questions))
