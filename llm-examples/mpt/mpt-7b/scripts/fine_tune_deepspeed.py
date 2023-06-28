@@ -64,7 +64,8 @@ def load_model(
                                         trust_remote_code=True
                                         )
     config.attn_config['attn_impl'] = 'triton'
-    config.init_device = 'cuda:0'
+    config.init_device = 'cuda'
+    model_hidden_size = config.d_model
 
     model = transformers.AutoModelForCausalLM.from_pretrained(
       pretrained_model_name_or_path,
@@ -72,7 +73,7 @@ def load_model(
       torch_dtype=torch.float16,
       trust_remote_code=True
     )
-    return model
+    return model, model_hidden_size
 
 def get_tokenizer(
     pretrained_tokenizer_name_or_path: str = TOKENIZER_PATH,
@@ -89,11 +90,15 @@ def train():
   # Enable tf32 for better performance
   torch.backends.cuda.matmul.allow_tf32 = True
 
-  model = load_model()
+  model, model_hidden_size = load_model()
   device = 'cuda'
   model.to(device)
   tokenizer = get_tokenizer()
   train_dataset, val_dataset = load_training_dataset(tokenizer)
+  ds_config_dict["hidden_size"] = model_hidden_size
+  ds_config_dict["zero_optimization"]["reduce_bucket_size"] = model_hidden_size*model_hidden_size
+  ds_config_dict["zero_optimization"]["stage3_prefetch_bucket_size"] = 0.9 * model_hidden_size * model_hidden_size
+  ds_config_dict["zero_optimization"]["stage3_param_persistence_threshold"] = 10 * model_hidden_size
 
   training_args = TrainingArguments(
     output_dir="/local_disk0/output",
