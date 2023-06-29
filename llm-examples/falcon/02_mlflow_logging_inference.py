@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Load and Inference Falcon-7b-instruct model with MLFlow on Databricks
+# MAGIC # Manage Falcon-7b-instruct model with MLFlow on Databricks
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
 # MAGIC - Instance: `g5.4xlarge` on AWS
@@ -15,12 +15,7 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Use MLflow to manage the model
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Log the model
+# MAGIC ## Log the model
 
 # COMMAND ----------
 
@@ -144,7 +139,7 @@ with mlflow.start_run() as run:
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Register the model
+# MAGIC ## Register the model
 
 # COMMAND ----------
 
@@ -159,7 +154,7 @@ result = mlflow.register_model(
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Load the model from model registry
+# MAGIC ## Load the model from model registry
 # MAGIC Assume that the below code is run separately or after the memory cache is cleared.
 # MAGIC
 # MAGIC If it's run in a separate notebook, make sure to install the Python libraries before loading from MLflow.

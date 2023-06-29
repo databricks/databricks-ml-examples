@@ -45,6 +45,8 @@ model = transformers.AutoModelForCausalLM.from_pretrained(
   cache_dir="/local_disk0/.cache/huggingface/"
 )
 
+model.eval()
+
 tokenizer = transformers.AutoTokenizer.from_pretrained("EleutherAI/gpt-neox-20b", padding_side="left")
 
 generator = transformers.pipeline("text-generation",
