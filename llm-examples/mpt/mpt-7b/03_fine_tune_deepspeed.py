@@ -45,7 +45,7 @@ dbutils.library.restartPython()
 # MAGIC %md
 # MAGIC ## Fine tune the model with `deepspeed`
 # MAGIC
-# MAGIC The fine tune logic is written in `scripts/fine_tune_deepspeed.py`.
+# MAGIC The fine tune logic is written in `scripts/fine_tune_deepspeed.py`. The dataset used for fine tune is [databricks-dolly-15k ](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
 
 # COMMAND ----------
 
@@ -56,11 +56,6 @@ dbutils.library.restartPython()
 
 # MAGIC %md
 # MAGIC Model checkpoint is saved at `/local_disk0/output`.
-
-# COMMAND ----------
-
-# MAGIC %sh
-# MAGIC ls -la /local_disk0/output/
 
 # COMMAND ----------
 
