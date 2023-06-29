@@ -28,7 +28,7 @@ import torch
 
 model = "tiiuae/falcon-7b-instruct"
 
-tokenizer = AutoTokenizer.from_pretrained(model)
+tokenizer = AutoTokenizer.from_pretrained(model, padding_side="left")
 pipeline = transformers.pipeline(
     "text-generation",
     model=model,
@@ -38,6 +38,9 @@ pipeline = transformers.pipeline(
     device_map="auto",
     revision="9f16e66a0235c4ba24e321e3be86dd347a7911a0", # it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of falcon-7b-instruct in https://huggingface.co/tiiuae/falcon-7b-instruct/commits/main
 )
+
+# Required tokenizer setting for batch inference
+pipeline.tokenizer.pad_token_id = tokenizer.eos_token_id
 
 # COMMAND ----------
 
@@ -111,12 +114,6 @@ print(results[0])
 
 # MAGIC %md
 # MAGIC ### Batch inference
-
-# COMMAND ----------
-
-# Required tokenizer setting for batch inference
-pipeline.tokenizer.pad_token_id = tokenizer.eos_token_id
-pipeline.tokenizer.padding_side = 'left'
 
 # COMMAND ----------
 

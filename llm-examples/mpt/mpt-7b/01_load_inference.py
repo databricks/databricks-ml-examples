@@ -94,7 +94,7 @@ generate_kwargs = {
   'top_k': 50,
   'repetition_penalty': 1.0,
   'no_repeat_ngram_size': 0,
-  'use_cache': False,
+  'use_cache': True,
   'do_sample': True,
   'eos_token_id': tokenizer.eos_token_id,
   'pad_token_id': tokenizer.eos_token_id,
