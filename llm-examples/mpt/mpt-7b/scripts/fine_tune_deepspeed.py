@@ -44,9 +44,55 @@ def load_training_dataset(
     logger.info(f"Found {dataset.num_rows} rows", )
 
     def _reformat_data(rec):
-      PROMPT_FORMAT = f"{rec['question']}\n wrong answers are:{rec['distractor1']} - {rec['distractor2']} - {rec['distractor3']}\n Correct Answer: "
-      questions = PROMPT_FORMAT
-      answer = rec["correct_answer"]
+      # Convert the data as the format for dolly datasets
+      INSTRUCTION_KEY = "### Instruction:"
+      RESPONSE_KEY = "### Response:"
+      INTRO_BLURB = "Below is an instruction that describes a task. Write a response that appropriately completes the request."
+      INPUT_KEY = "Input:"
+      END_KEY = "### End"
+      PROMPT_NO_INPUT_FORMAT = """{intro}
+
+      {instruction_key}
+      {instruction}
+
+      {response_key}
+      """.format(
+          intro=INTRO_BLURB,
+          instruction_key=INSTRUCTION_KEY,
+          instruction="{instruction}",
+          response_key=RESPONSE_KEY,
+      )
+
+      PROMPT_WITH_INPUT_FORMAT = """{intro}
+
+      {instruction_key}
+      {instruction}
+
+      {input_key}
+      {input}
+
+      {response_key}
+      """.format(
+          intro=INTRO_BLURB,
+          instruction_key=INSTRUCTION_KEY,
+          instruction="{instruction}",
+          input_key=INPUT_KEY,
+          input="{input}",
+          response_key=RESPONSE_KEY
+      )
+      ANSWER_FORMAT = """
+      {response}
+      {end_key}
+      """.format(
+        response="{response}",
+        end_key=END_KEY
+      )
+      context = rec.get("context")
+      if context:
+            questions = PROMPT_WITH_INPUT_FORMAT.format(instruction=rec['instruction'], input=context)
+        else:
+            questions = PROMPT_NO_INPUT_FORMAT.format(instruction=rec['instruction'])
+      answer = ANSWER_FORMAT.format(response=rec["response"])
       return {"text": f"{{ 'prompt': {questions}, 'response': {answer} }}"}
     
     dataset = dataset.map(_reformat_data)
@@ -137,8 +183,8 @@ def train(
     do_eval=True,
     evaluation_strategy="steps",
     eval_steps=eval_steps,
-    fp16=False,
-    bf16=True,
+    fp16=fp16,
+    bf16=bf16,
     deepspeed=ds_config_dict,
     logging_strategy="steps",
     logging_steps=logging_steps,
@@ -205,7 +251,7 @@ def train(
     default=True,
     help="Provided by deepspeed to identify which instance this process is when performing multi-GPU training.",
 )
-@click.option("--bf16", type=bool, default=False, help="Whether to use bf16 (preferred on A100's).")
+@click.option("--bf16", type=bool, default=True, help="Whether to use bf16 (preferred on A100's).")
 def main(**kwargs):
     train(**kwargs)
 
