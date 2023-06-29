@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Load and Inference MPT-7B model with MLFlow on Databricks
+# MAGIC # Manage MPT-7B model with MLFlow on Databricks
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
