@@ -1,10 +1,22 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Load and Inference MPT-7B model with MLFlow on Databricks
+# MAGIC # Manage MPT-7B model with MLFlow on Databricks
 # MAGIC
 # MAGIC Environment for this notebook:
-# MAGIC - Runtime: 13.2 GPU ML Runtime
+# MAGIC - Runtime: 13.1 GPU ML Runtime
 # MAGIC - Instance: `g5.4xlarge` on AWS
+
+# COMMAND ----------
+
+# Skip this step if running on Databricks runtime 13.2 GPU and above.
+!wget -O /local_disk0/tmp/libcusparse-dev-11-7_11.7.3.50-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcusparse-dev-11-7_11.7.3.50-1_amd64.deb && \
+  dpkg -i /local_disk0/tmp/libcusparse-dev-11-7_11.7.3.50-1_amd64.deb && \
+  wget -O /local_disk0/tmp/libcublas-dev-11-7_11.10.1.25-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcublas-dev-11-7_11.10.1.25-1_amd64.deb && \
+  dpkg -i /local_disk0/tmp/libcublas-dev-11-7_11.10.1.25-1_amd64.deb && \
+  wget -O /local_disk0/tmp/libcusolver-dev-11-7_11.4.0.1-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcusolver-dev-11-7_11.4.0.1-1_amd64.deb && \
+  dpkg -i /local_disk0/tmp/libcusolver-dev-11-7_11.4.0.1-1_amd64.deb && \
+  wget -O /local_disk0/tmp/libcurand-11-7_10.2.10.91-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcurand-11-7_10.2.10.91-1_amd64.deb && \
+  dpkg -i /local_disk0/tmp/libcurand-11-7_10.2.10.91-1_amd64.deb
 
 # COMMAND ----------
 
@@ -77,6 +89,7 @@ class MPT(mlflow.pyfunc.PythonModel):
         generated_text = []
         for index, row in model_input.iterrows():
           prompt = row["prompt"]
+          # You can add other parameters here
           temperature = model_input.get("temperature", [1.0])[0]
           max_new_tokens = model_input.get("max_new_tokens", [100])[0]
           full_prompt = self._build_prompt(prompt)
