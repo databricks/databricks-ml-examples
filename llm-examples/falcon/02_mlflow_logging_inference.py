@@ -155,15 +155,6 @@ result = mlflow.register_model(
 
 # MAGIC %md
 # MAGIC ## Load the model from model registry
-# MAGIC Assume that the below code is run separately or after the memory cache is cleared.
-# MAGIC
-# MAGIC You can clear the GPU memory through the "Detach & Re-attach" button.
-
-# COMMAND ----------
-
-# Install the Python packages after the status of the notebook was cleared
-%pip install -q -U torch==2.0.1
-%pip install -q einops==0.6.1
 
 # COMMAND ----------
 
