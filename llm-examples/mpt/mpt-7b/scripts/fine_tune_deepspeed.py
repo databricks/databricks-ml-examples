@@ -89,9 +89,9 @@ def load_training_dataset(
       )
       context = rec.get("context")
       if context:
-            questions = PROMPT_WITH_INPUT_FORMAT.format(instruction=rec['instruction'], input=context)
-        else:
-            questions = PROMPT_NO_INPUT_FORMAT.format(instruction=rec['instruction'])
+        questions = PROMPT_WITH_INPUT_FORMAT.format(instruction=rec['instruction'], input=context)
+      else:
+        questions = PROMPT_NO_INPUT_FORMAT.format(instruction=rec['instruction'])
       answer = ANSWER_FORMAT.format(response=rec["response"])
       return {"text": f"{{ 'prompt': {questions}, 'response': {answer} }}"}
     
@@ -251,7 +251,7 @@ def train(
     default=True,
     help="Provided by deepspeed to identify which instance this process is when performing multi-GPU training.",
 )
-@click.option("--bf16", type=bool, default=True, help="Whether to use bf16 (preferred on A100's).")
+@click.option("--bf16", type=bool, default=True, help="Whether to use bf16 (preferred on A10's and A100's).")
 def main(**kwargs):
     train(**kwargs)
 
