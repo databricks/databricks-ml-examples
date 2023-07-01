@@ -186,6 +186,7 @@ loaded_model = mlflow.pyfunc.load_model("runs:/" + run.info.run_id + "/model")
 # COMMAND ----------
 
 # Make a prediction using the loaded model
+# The original Falcon-7B model was not trained much on Chinese, but after fine-tuning on the openassistant dataset it answers Chinese questions better
 results = loaded_model.predict(
     {
         "prompt": ["什么是机器学习？", "What is machine learning?"],
