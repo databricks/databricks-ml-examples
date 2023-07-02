@@ -209,10 +209,12 @@ def train(
 
   logger.info(f"Saving Model to {local_output_dir}")
   trainer.save_model(output_dir=local_output_dir)
+  tokenizer.save_pretrained(local_output_dir)
 
   if dbfs_output_dir:
     logger.info(f"Saving Model to {dbfs_output_dir}")
     trainer.save_model(output_dir=dbfs_output_dir)
+    tokenizer.save_pretrained(dbfs_output_dir)
 
   logger.info("Training finished.")
 
