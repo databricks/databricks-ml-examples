@@ -26,6 +26,40 @@ os.environ['TRANSFORMERS_CACHE'] = '/local_disk0/hf'
 
 logger = logging.getLogger(__name__)
 
+INTRO_BLURB = "Below is an instruction that describes a task. Write a response that appropriately completes the request."
+INSTRUCTION_KEY = "### Instruction:"
+INPUT_KEY = "Input:"
+RESPONSE_KEY = "### Response:"
+PROMPT_NO_INPUT_FORMAT = """{intro}
+
+{instruction_key}
+{instruction}
+
+{response_key}""".format(
+  intro=INTRO_BLURB,
+  instruction_key=INSTRUCTION_KEY,
+  instruction="{instruction}",
+  response_key=RESPONSE_KEY,
+)
+
+PROMPT_WITH_INPUT_FORMAT = """{intro}
+
+{instruction_key}
+{instruction}
+
+{input_key}
+{input}
+
+{response_key}""".format(
+  intro=INTRO_BLURB,
+  instruction_key=INSTRUCTION_KEY,
+  instruction="{instruction}",
+  input_key=INPUT_KEY,
+  input="{input}",
+  response_key=RESPONSE_KEY,
+)
+
+
 ROOT_PATH = Path(__file__).parent.parent
 MODEL_PATH = 'mosaicml/mpt-7b'
 TOKENIZER_PATH = 'EleutherAI/gpt-neox-20b'
@@ -38,71 +72,32 @@ DEFAULT_SEED = 68
 def load_training_dataset(
   tokenizer,
   path_or_dataset: str = DEFAULT_TRAINING_DATASET,
+  seed: int = DEFAULT_SEED
   ) -> Dataset:
     logger.info(f"Loading dataset from {path_or_dataset}")
-    dataset = load_dataset(path_or_dataset)
+    dataset = load_dataset(path_or_dataset)["train"]
     logger.info(f"Found {dataset.num_rows} rows", )
 
     def _reformat_data(rec):
-      # Convert the data as the format for dolly datasets
-      INSTRUCTION_KEY = "### Instruction:"
-      RESPONSE_KEY = "### Response:"
-      INTRO_BLURB = "Below is an instruction that describes a task. Write a response that appropriately completes the request."
-      INPUT_KEY = "Input:"
-      END_KEY = "### End"
-      PROMPT_NO_INPUT_FORMAT = """{intro}
-
-      {instruction_key}
-      {instruction}
-
-      {response_key}
-      """.format(
-          intro=INTRO_BLURB,
-          instruction_key=INSTRUCTION_KEY,
-          instruction="{instruction}",
-          response_key=RESPONSE_KEY,
-      )
-
-      PROMPT_WITH_INPUT_FORMAT = """{intro}
-
-      {instruction_key}
-      {instruction}
-
-      {input_key}
-      {input}
-
-      {response_key}
-      """.format(
-          intro=INTRO_BLURB,
-          instruction_key=INSTRUCTION_KEY,
-          instruction="{instruction}",
-          input_key=INPUT_KEY,
-          input="{input}",
-          response_key=RESPONSE_KEY
-      )
-      ANSWER_FORMAT = """
-      {response}
-      {end_key}
-      """.format(
-        response="{response}",
-        end_key=END_KEY
-      )
+      instruction = rec["instruction"]
+      response = rec["response"]
       context = rec.get("context")
+
       if context:
-        questions = PROMPT_WITH_INPUT_FORMAT.format(instruction=rec['instruction'], input=context)
+        questions = PROMPT_WITH_INPUT_FORMAT.format(instruction=instruction, input=context)
       else:
-        questions = PROMPT_NO_INPUT_FORMAT.format(instruction=rec['instruction'])
-      answer = ANSWER_FORMAT.format(response=rec["response"])
-      return {"text": f"{{ 'prompt': {questions}, 'response': {answer} }}"}
+        questions = PROMPT_NO_INPUT_FORMAT.format(instruction=instruction)
+      return {"text": f"{{ 'prompt': {questions}, 'response': {response} }}"}
     
     dataset = dataset.map(_reformat_data)
 
     def tokenize_function(allEntries):
-      return tokenizer(allEntries['text'], padding='max_length', truncation=True)
+      return tokenizer(allEntries['text'], truncation=True, max_length=512)
     
     dataset = dataset.map(tokenize_function)
-    train_tokenized_dataset = dataset['train']
-    eval_tokenized_dataset = dataset['validation']
+    split_dataset = dataset.train_test_split(test_size=1000, seed=seed)
+    train_tokenized_dataset = split_dataset['train']
+    eval_tokenized_dataset = split_dataset['test']
 
     return train_tokenized_dataset, eval_tokenized_dataset
       
@@ -122,7 +117,7 @@ def load_model(
     model = transformers.AutoModelForCausalLM.from_pretrained(
       pretrained_model_name_or_path,
       config=config,
-      torch_dtype=torch.float16,
+      torch_dtype=torch.bfloat16,
       trust_remote_code=True
     )
     return model, model_hidden_size
@@ -164,7 +159,7 @@ def train(
 
   model, model_hidden_size = load_model(pretrained_model_name_or_path=input_model)
   tokenizer = get_tokenizer()
-  train_dataset, val_dataset = load_training_dataset(tokenizer)
+  train_dataset, val_dataset = load_training_dataset(tokenizer, seed=seed)
   ds_config_dict["hidden_size"] = model_hidden_size
   ds_config_dict["zero_optimization"]["reduce_bucket_size"] = model_hidden_size*model_hidden_size
   ds_config_dict["zero_optimization"]["stage3_prefetch_bucket_size"] = 0.9 * model_hidden_size * model_hidden_size
@@ -214,12 +209,10 @@ def train(
 
   logger.info(f"Saving Model to {local_output_dir}")
   trainer.save_model(output_dir=local_output_dir)
-  tokenizer.save_pretrained(local_output_dir)
 
   if dbfs_output_dir:
     logger.info(f"Saving Model to {dbfs_output_dir}")
     trainer.save_model(output_dir=dbfs_output_dir)
-    tokenizer.save_pretrained(dbfs_output_dir)
 
   logger.info("Training finished.")
 
@@ -229,8 +222,8 @@ def train(
 @click.option("--local-output-dir", type=str, help="Write directly to this local path", default=LOCAL_OUTPUT_DIR)
 @click.option("--dbfs-output-dir", type=str, help="Sync data to this path on DBFS")
 @click.option("--epochs", type=int, default=3, help="Number of epochs to train for.")
-@click.option("--per-device-train-batch-size", type=int, default=8, help="Batch size to use for training.")
-@click.option("--per-device-eval-batch-size", type=int, default=8, help="Batch size to use for evaluation.")
+@click.option("--per-device-train-batch-size", type=int, default=1, help="Batch size to use for training.")
+@click.option("--per-device-eval-batch-size", type=int, default=1, help="Batch size to use for evaluation.")
 @click.option("--warmup-steps", type=int, default=20, help="Number of steps to warm up to learning rate")
 @click.option("--logging-steps", type=int, default=10, help="How often to log")
 @click.option("--eval-steps", type=int, default=50, help="How often to run evaluation on test records")
@@ -251,7 +244,7 @@ def train(
     default=True,
     help="Provided by deepspeed to identify which instance this process is when performing multi-GPU training.",
 )
-@click.option("--bf16", type=bool, default=True, help="Whether to use bf16 (preferred on A10's and A100's).")
+@click.option("--bf16", type=bool, default=True, help="Whether to use bf16 (preferred on A100's).")
 def main(**kwargs):
     train(**kwargs)
 
