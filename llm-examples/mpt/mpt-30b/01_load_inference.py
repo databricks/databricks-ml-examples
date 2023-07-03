@@ -36,7 +36,7 @@
 # MAGIC %md
 # MAGIC ## Inference
 # MAGIC
-# MAGIC Note: This model requires that trust_remote_code=True be passed to the from_pretrained method. This is because we use a custom model architecture that is not yet part of the transformers package.
+# MAGIC Note: This model requires that `trust_remote_code=True` be passed to the `from_pretrained` method. This is because MosaicML uses a custom model architecture that is not yet part of the transformers package.
 
 # COMMAND ----------
 
