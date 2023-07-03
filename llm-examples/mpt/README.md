@@ -17,6 +17,6 @@ limitations under the License.
 
 # Example notebooks for MPT model on Databricks
 This folder contains the fowllowing examples for [MPT-7B](https://www.mosaicml.com/blog/mpt-7b) and [MPT-30B](https://www.mosaicml.com/blog/mpt-30b) models: 
-- Model inference with `MPT-*-instruct`
-- Model logging to MLFlow and batch inference with the model from MLFlow
+- `01_load_inference`: Model inference with `MPT-*-instruct`
+- `02_mlflow_logging_inference`: Model logging to MLFlow and batch inference with the model from MLFlow
 
