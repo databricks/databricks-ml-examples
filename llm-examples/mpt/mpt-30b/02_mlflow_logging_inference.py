@@ -144,21 +144,6 @@ with mlflow.start_run() as run:
 
 # COMMAND ----------
 
-import mlflow
-import pandas as pd
-
-logged_model = 'runs:/7715695b0c134d31a30c6c5ab4c9d43f/model'
-
-# Load model as a PyFuncModel.
-loaded_model = mlflow.pyfunc.load_model(logged_model)
-
-# Predict on a Pandas DataFrame.
-
-input_example=pd.DataFrame({"prompt":["what is ML?", "Name 10 colors."], "temperature": [0.5, 0.2],"max_tokens": [100, 200]})
-loaded_model.predict(input_example)
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ### Register the model
 
