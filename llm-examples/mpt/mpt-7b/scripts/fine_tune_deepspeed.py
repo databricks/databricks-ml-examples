@@ -61,8 +61,9 @@ PROMPT_WITH_INPUT_FORMAT = """{intro}
 
 
 ROOT_PATH = Path(__file__).parent.parent
-MODEL_PATH = 'mosaicml/mpt-7b'
-TOKENIZER_PATH = 'EleutherAI/gpt-neox-20b'
+MODEL_PATH = "mosaicml/mpt-7b"
+REVISION = "72e5f594ce36f9cabfa2a9fd8f58b491eb467ee7"
+TOKENIZER_PATH = "EleutherAI/gpt-neox-20b"
 DEFAULT_TRAINING_DATASET = "databricks/databricks-dolly-15k"
 CONFIG_PATH = "../../config/a10_config.json"
 LOCAL_OUTPUT_DIR = "/local_disk0/output"
@@ -118,7 +119,8 @@ def load_model(
       pretrained_model_name_or_path,
       config=config,
       torch_dtype=torch.bfloat16,
-      trust_remote_code=True
+      trust_remote_code=True,
+      revision=REVISION,
     )
     return model, model_hidden_size
 
