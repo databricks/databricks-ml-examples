@@ -7,7 +7,7 @@
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
-# MAGIC - Instance: `g5.12xlarge` on AWS with 4 A10 GPUs.
+# MAGIC - Instance: `g5.48xlarge` on AWS with 8 A10 GPUs.
 # MAGIC
 
 # COMMAND ----------
