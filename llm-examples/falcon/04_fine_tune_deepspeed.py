@@ -1,9 +1,14 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC # Fine-tune Falcon-7B with DeepSpeed
+# MAGIC
+# MAGIC This example notebook demonstrates how to fine-tune the Falcon-7B model on [databricks-dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k), which is an instruction following dataset, with the [DeepSpeed integration of Hugging Face](https://huggingface.co/docs/transformers/main_classes/deepspeed).
+# MAGIC
 # MAGIC Environment tested for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
-# MAGIC - Instance: `Standard_NC48ads_A100_v4` on Azure (2 A100 80GB GPUs)
+# MAGIC - Instance: `Standard_NC48ads_A100_v4` on Azure (2 A100-80GB GPUs)
+# MAGIC
+# MAGIC Even with the memory optimizations provided by DeepSpeed, fine-tuning Falcon-7B still requires a lot of GPU memory. On Azure, we suggest using `Standard_NC48ads_A100_v4`; on AWS, we suggest using `g5.48xlarge` that has 8 A10 GPUs.
 
 # COMMAND ----------
 
@@ -45,19 +50,23 @@
 # MAGIC ## Run deepspeed fine-tuning script
 # MAGIC The fine-tuning script is in `scripts/fine_tune_deepspeed_falcon.py`. In the script,
 # MAGIC
-# MAGIC - the default training configurations are provided in the `click.option` lines; you can pass custom arguments into the program such as
+# MAGIC - The dataset used for fine-tuning is `databricks/databricks-dolly-15k`
+# MAGIC - The default training configurations are provided in the `click.option` lines.
+# MAGIC
+# MAGIC   You can see the explanation of the configuration options in the script, and pass custom arguments into the program such as
 # MAGIC   ```shell
 # MAGIC   deepspeed --num_gpus=<num_gpus> scripts/fine_tune_deepspeed_falcon.py \
-# MAGIC   --dbfs-output-dir="/dbfs/falcon_7b_openassistant" \
-# MAGIC   --epochs=1 --max_steps=-1
+# MAGIC   --dbfs-output-dir="/dbfs/falcon_7b_finetuned" \
+# MAGIC   --epochs=1 \
+# MAGIC   --max_steps=-1
 # MAGIC   ```
 # MAGIC   
-# MAGIC - the deepspeed configurations are read from `../config/a100_config.json`, which is adapted from the ZeRO stage 3 configuration of https://huggingface.co/docs/transformers/main_classes/deepspeed
-# MAGIC - the dataset used for fine-tuning is `timdettmers/openassistant-guanaco`, which is a subset of `OpenAssistant/oasst1`
+# MAGIC - The deepspeed configurations are read from `../config/a100_config.json`, which is adapted from the ZeRO stage 3 configuration of https://huggingface.co/docs/transformers/main_classes/deepspeed
 
 # COMMAND ----------
 
 # MAGIC %sh
+# MAGIC # This will take <20 min to complete, configure --max_steps to fine-tune with more training steps
 # MAGIC deepspeed --num_gpus=2 scripts/fine_tune_deepspeed_falcon.py
 
 # COMMAND ----------
@@ -74,6 +83,11 @@
 # MAGIC %sh
 # MAGIC # Remove checkpoints before logging the model to MLflow
 # MAGIC rm -rf /local_disk0/output/checkpoint-*
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Save fine-tuned model with MLflow
 
 # COMMAND ----------
 
@@ -105,10 +119,18 @@ class Falcon(mlflow.pyfunc.PythonModel):
         """
         This method generates the prompt for the model.
         """
-        INSTRUCTION_KEY = "### Human:"
-        RESPONSE_KEY = "### Assistant:"
+        INSTRUCTION_KEY = "### Instruction:"
+        RESPONSE_KEY = "### Response:"
+        INTRO_BLURB = (
+            "Below is an instruction that describes a task. "
+            "Write a response that appropriately completes the request."
+        )
 
-        return f"{INSTRUCTION_KEY} {instruction} {RESPONSE_KEY}"
+        return f"""{INTRO_BLURB}
+        {INSTRUCTION_KEY}
+        {instruction}
+        {RESPONSE_KEY}
+        """
 
     def _generate_response(self, prompt, temperature, max_new_tokens):
         """
@@ -181,16 +203,20 @@ with mlflow.start_run() as run:
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ## Load fine-tuned model for inference
+
+# COMMAND ----------
+
 loaded_model = mlflow.pyfunc.load_model("runs:/" + run.info.run_id + "/model")
 
 # COMMAND ----------
 
 # Make a prediction using the loaded model
-# The original Falcon-7B model was not trained much on Chinese, but after fine-tuning on the openassistant dataset it answers Chinese questions better
 results = loaded_model.predict(
     {
-        "prompt": ["什么是机器学习？", "What is machine learning?"],
-        "temperature": [1.0, 0.5],
+        "prompt": ["Write a short poem about AI taking over the world.", "What is machine learning?"],
+        "temperature": [0.8, 0.5],
         "max_new_tokens": [100, 100],
     }
 )
