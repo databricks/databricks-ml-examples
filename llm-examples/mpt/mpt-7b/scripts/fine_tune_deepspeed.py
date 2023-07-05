@@ -186,7 +186,6 @@ def train(
     save_strategy="steps",
     save_steps=save_steps,
     save_total_limit=save_total_limit,
-    max_steps=20,
     local_rank=local_rank,
     warmup_steps=warmup_steps,
     report_to=[],
