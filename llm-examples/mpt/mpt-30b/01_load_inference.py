@@ -46,7 +46,8 @@ import torch
 
 # COMMAND ----------
 
-name = 'mosaicml/mpt-30b-instruct'
+name = "mosaicml/mpt-30b-instruct"
+revision = "2abf1163dd8c9b11f07d805c06e6ec90a1f2037e"
 
 config = transformers.AutoConfig.from_pretrained(name, trust_remote_code=True)
 config.max_seq_len = 16384
@@ -58,6 +59,7 @@ model = transformers.AutoModelForCausalLM.from_pretrained(
   config=config,
   torch_dtype=torch.bfloat16, # Load model weights in bfloat16
   trust_remote_code=True,
+  revision=revision,
   cache_dir="/local_disk0/.cache/huggingface/",
   device_map = 'auto',
 )
