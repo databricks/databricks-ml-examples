@@ -160,6 +160,7 @@ def train(
   model, model_hidden_size = load_model(pretrained_model_name_or_path=input_model)
   tokenizer = get_tokenizer()
   train_dataset, val_dataset = load_training_dataset(tokenizer, seed=seed)
+  # For MPT model, we need to update the config for stage3 optimization.
   ds_config_dict["hidden_size"] = model_hidden_size
   ds_config_dict["zero_optimization"]["reduce_bucket_size"] = model_hidden_size*model_hidden_size
   ds_config_dict["zero_optimization"]["stage3_prefetch_bucket_size"] = 0.9 * model_hidden_size * model_hidden_size
