@@ -188,7 +188,10 @@ import time
 import logging
 
 
-def get_gen_text_time(prompt, use_template=True, **kwargs):
+def get_gen_text_throughput(prompt, use_template=True, **kwargs):
+    """
+    Return tuple ( number of tokens / sec, num tokens, output ) of the generated tokens
+    """
     if use_template:
         full_prompt = PROMPT_FOR_GENERATION_FORMAT.format(instruction=prompt)
     else:
@@ -215,24 +218,30 @@ def get_gen_text_time(prompt, use_template=True, **kwargs):
 
     # get the number of generated tokens
     n_tokens = len(outputs[0]["generated_token_ids"])
-    
-    logging.warning(
-        f"{n_tokens/duration} tokens/sec, {n_tokens} tokens (including full prompt)"
-    )
 
+    # show the generated text in logging
     result = tokenizer.batch_decode(
         outputs[0]["generated_token_ids"][num_input_tokens:], skip_special_tokens=True
     )
+    result = "".join(result)
 
-    return "".join(result)
+    return (n_tokens / duration, n_tokens, result)
 
 # COMMAND ----------
 
-result = get_gen_text_time("What is ML?", max_new_tokens=200, use_template=True)
+throughput, n_tokens, result = get_gen_text_throughput("What is ML?", max_new_tokens=200, use_template=True)
+
+print(f"{throughput} tokens/sec, {n_tokens} tokens (including full prompt)")
 print(result)
 
 # COMMAND ----------
 
-# When the context is long or the generated text is long, it takes longer to generate each token
-result = get_gen_text_time(long_input, max_new_tokens=200, use_template=True)
+# When the context is long or the generated text is long, it takes longer to generate each token in average
+throughput, n_tokens, result = get_gen_text_throughput(long_input, max_new_tokens=200, use_template=True)
+
+print(f"{throughput} tokens/sec, {n_tokens} tokens (including full prompt)")
 print(result)
+
+# COMMAND ----------
+
+
