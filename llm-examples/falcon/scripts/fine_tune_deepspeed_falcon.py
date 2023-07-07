@@ -58,11 +58,11 @@ ROOT_PATH = Path(__file__).parent.parent
 MODEL_PATH = "tiiuae/falcon-7b"
 TOKENIZER_PATH = "tiiuae/falcon-7b"
 DEFAULT_TRAINING_DATASET = "databricks/databricks-dolly-15k"
-CONFIG_PATH = "../config/a100_config.json"
+CONFIG_PATH = "../config/a10_config.json"
 LOCAL_OUTPUT_DIR = "/local_disk0/output"
 DEFAULT_SEED = 68
 REVISION = "2f5c3cd4eace6be6c0f12981f377fb35e5bf6ee5"  # most recent in https://huggingface.co/tiiuae/falcon-7b/commits/main as of 6/29/2023
-MAX_SEQ_LEN = 256
+MAX_SEQ_LEN = 512
 
 
 def load_training_dataset(
@@ -95,7 +95,7 @@ def load_training_dataset(
     dataset = dataset.map(_reformat_data)
 
     def tokenize_function(allEntries):
-      return tokenizer(allEntries['text'], truncation=True, max_length=512)
+      return tokenizer(allEntries['text'], truncation=True, max_length=MAX_SEQ_LEN)
 
     dataset = dataset.map(tokenize_function)
 
@@ -110,6 +110,7 @@ def load_training_dataset(
 
 def load_model(
     pretrained_model_name_or_path: str = MODEL_PATH,
+    bf16: bool = False,
 ) -> AutoModelForCausalLM:
     logger.info(f"Loading model for {pretrained_model_name_or_path}")
     config = AutoConfig.from_pretrained(
@@ -117,10 +118,13 @@ def load_model(
         trust_remote_code=True,
         revision=REVISION,
     )
+
+    torch_dtype = torch.bfloat16 if bf16 else torch.float16
+
     model = transformers.AutoModelForCausalLM.from_pretrained(
         pretrained_model_name_or_path,
         config=config,
-        torch_dtype=torch.float16,
+        torch_dtype=torch_dtype,
         trust_remote_code=True,
         revision=REVISION,
     )
@@ -153,6 +157,7 @@ def train(
     lr: float,
     seed: int,
     gradient_checkpointing: bool,
+    gradient_accumulation_steps: int,
     local_rank: str,
     bf16: bool,
     logging_steps: int,
@@ -170,7 +175,7 @@ def train(
     tokenizer = get_tokenizer()
     train_dataset, val_dataset = load_training_dataset(tokenizer, seed=seed)
 
-    model = load_model(pretrained_model_name_or_path=input_model)
+    model = load_model(pretrained_model_name_or_path=input_model, bf16=bf16)
 
     # enable fp16 if not bf16
     fp16 = not bf16
@@ -180,11 +185,12 @@ def train(
         per_device_train_batch_size=per_device_train_batch_size,
         per_device_eval_batch_size=per_device_eval_batch_size,
         gradient_checkpointing=gradient_checkpointing,
+        gradient_accumulation_steps=gradient_accumulation_steps,
         learning_rate=lr,
         num_train_epochs=epochs,
         weight_decay=1,
         do_eval=True,
-        evaluation_strategy="steps",
+        evaluation_strategy="epoch",
         eval_steps=eval_steps,
         fp16=fp16,
         bf16=bf16,
@@ -229,7 +235,7 @@ def train(
 @click.option("--input-model", type=str, help="Input model to fine tune", default=MODEL_PATH)
 @click.option("--local-output-dir", type=str, help="Write directly to this local path", default=LOCAL_OUTPUT_DIR)
 @click.option("--dbfs-output-dir", type=str, help="Sync data to this path on DBFS")
-@click.option("--epochs", type=int, default=3, help="Number of epochs to train for.")
+@click.option("--epochs", type=int, default=1, help="Number of epochs to train for.")
 @click.option("--per-device-train-batch-size", type=int, default=1, help="Batch size to use for training.")
 @click.option("--per-device-eval-batch-size", type=int, default=1, help="Batch size to use for evaluation.")
 @click.option("--warmup-steps", type=int, default=20, help="Number of steps to warm up to learning rate")
@@ -247,6 +253,7 @@ def train(
     default=True,
     help="Use gradient checkpointing?",
 )
+@click.option("--gradient-accumulation-steps", type=int, default=8, help="Number of steps to accumulate gradients until stepping the optimizer")
 @click.option(
     "--local_rank",
     type=str,

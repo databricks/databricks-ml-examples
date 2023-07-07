@@ -6,9 +6,9 @@
 # MAGIC
 # MAGIC Environment tested for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
-# MAGIC - Instance: `Standard_NC48ads_A100_v4` on Azure (2 A100-80GB GPUs)
+# MAGIC - Instance: `g5.12xlarge` (4 A10 GPUs) on AWS
 # MAGIC
-# MAGIC Even with the memory optimizations provided by DeepSpeed, fine-tuning Falcon-7B still requires a lot of GPU memory. On Azure, we suggest using `Standard_NC48ads_A100_v4`; on AWS, we suggest using `g5.48xlarge` that has 8 A10 GPUs.
+# MAGIC On Azure, we suggest using `Standard_NC48ads_A100_v4` on Azure (2 A100-80GB GPUs).
 
 # COMMAND ----------
 
@@ -56,18 +56,17 @@
 # MAGIC   You can see the explanation of the configuration options in the script, and pass custom arguments into the program such as
 # MAGIC   ```shell
 # MAGIC   deepspeed --num_gpus=<num_gpus> scripts/fine_tune_deepspeed_falcon.py \
-# MAGIC   --dbfs-output-dir="/dbfs/falcon_7b_finetuned" \
-# MAGIC   --epochs=1 \
-# MAGIC   --max_steps=-1
+# MAGIC    --per-device-train-batch-size=16 --per-device-eval-batch-size=16 --epochs=1 --max-steps=-1
 # MAGIC   ```
 # MAGIC   
-# MAGIC - The deepspeed configurations are read from `../config/a100_config.json`, which is adapted from the ZeRO stage 3 configuration of https://huggingface.co/docs/transformers/main_classes/deepspeed
+# MAGIC - The deepspeed configurations are read from `../config/a10_config.json`, which is adapted from the ZeRO stage 3 configuration of https://huggingface.co/docs/transformers/main_classes/deepspeed. If running on A100 GPUs, please set `CONFIG_PATH=../config/a100_config.json` in the script.
 
 # COMMAND ----------
 
 # MAGIC %sh
-# MAGIC # This will take <20 min to complete, configure --max_steps to fine-tune with more training steps
-# MAGIC deepspeed --num_gpus=2 scripts/fine_tune_deepspeed_falcon.py
+# MAGIC # This takes 1 hour to complete on g5.12xlarge; note that the progress bar could fail to update, so you could observe that it is still training by checking the GPU utilization
+# MAGIC deepspeed --num_gpus=4 scripts/fine_tune_deepspeed_falcon.py \
+# MAGIC  --per-device-train-batch-size=16 --per-device-eval-batch-size=16 --epochs=1 --max-steps=-1
 
 # COMMAND ----------
 
@@ -77,12 +76,6 @@
 # COMMAND ----------
 
 # MAGIC %ls /local_disk0/output
-
-# COMMAND ----------
-
-# MAGIC %sh
-# MAGIC # Remove checkpoints before logging the model to MLflow
-# MAGIC rm -rf /local_disk0/output/checkpoint-*
 
 # COMMAND ----------
 
