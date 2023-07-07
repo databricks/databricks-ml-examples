@@ -73,6 +73,7 @@ def gen_text_for_serving(prompt, **kwargs):
     # configure other text generation arguments
     kwargs.update(
         {
+            "do_sample": True,
             "pad_token_id": tokenizer.eos_token_id,  # Hugging Face sets pad_token_id to eos_token_id by default; setting here to not see redundant message
             "eos_token_id": tokenizer.eos_token_id,
         }
@@ -122,7 +123,7 @@ port = {port}
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Keep `app.run` running, and it could be used with Langchain ([documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/databricks.html#wrapping-a-cluster-driver-proxy-app)), or by call the serving endpoint with:
+# MAGIC Keep `app.run` running, and it could be used with Langchain (see the `04_langchain` example), or by call the serving endpoint with:
 # MAGIC ```python
 # MAGIC import requests
 # MAGIC import json
