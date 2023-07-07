@@ -26,6 +26,7 @@ os.environ["TRANSFORMERS_CACHE"] = "/local_disk0/hf"
 
 logger = logging.getLogger(__name__)
 
+<<<<<<< HEAD
 INTRO_BLURB = "Below is an instruction that describes a task. Write a response that appropriately completes the request."
 INSTRUCTION_KEY = "### Instruction:"
 INPUT_KEY = "Input:"
@@ -58,12 +59,19 @@ ROOT_PATH = Path(__file__).parent.parent
 MODEL_PATH = "tiiuae/falcon-7b"
 TOKENIZER_PATH = "tiiuae/falcon-7b"
 DEFAULT_TRAINING_DATASET = "databricks/databricks-dolly-15k"
+=======
+ROOT_PATH = Path(__file__).parent.parent
+MODEL_PATH = "tiiuae/falcon-7b"
+TOKENIZER_PATH = "tiiuae/falcon-7b"
+DEFAULT_TRAINING_DATASET = "timdettmers/openassistant-guanaco"
+>>>>>>> 634078d (Add Falcon-7B deepspeed example)
 CONFIG_PATH = "../config/a100_config.json"
 LOCAL_OUTPUT_DIR = "/local_disk0/output"
 DEFAULT_SEED = 68
 REVISION = "2f5c3cd4eace6be6c0f12981f377fb35e5bf6ee5"  # most recent in https://huggingface.co/tiiuae/falcon-7b/commits/main as of 6/29/2023
 MAX_SEQ_LEN = 256
 
+<<<<<<< HEAD
 def load_training_dataset(
   tokenizer,
   path_or_dataset: str = DEFAULT_TRAINING_DATASET,
@@ -104,6 +112,47 @@ def load_training_dataset(
     eval_tokenized_dataset = split_dataset['test']
 
     return train_tokenized_dataset, eval_tokenized_dataset
+=======
+def prepare_dataset_split(
+    tokenizer,
+    split: str,
+    path_or_dataset: str = DEFAULT_TRAINING_DATASET,
+    max_seq_len: int = MAX_SEQ_LEN,
+) -> Dataset:
+    logger.info(f"Loading dataset from {path_or_dataset}")
+
+    dataset = load_dataset(path_or_dataset, split=split)
+
+    logger.info(
+        f"Found {dataset.num_rows} rows",
+    )
+
+    # Inspired from: https://huggingface.co/learn/nlp-course/chapter7/6?fw=pt
+    def tokenize(element):
+        input_batch = []
+        attention_masks = []
+
+        outputs = tokenizer(
+            element["text"],
+            truncation=True,
+            padding=True,
+            max_length=max_seq_len,
+            return_overflowing_tokens=False,
+            return_length=True,
+        )
+
+        for length, input_ids, attention_mask in zip(
+            outputs["length"], outputs["input_ids"], outputs["attention_mask"]
+        ):
+            if length == max_seq_len:
+                input_batch.append(input_ids)
+                attention_masks.append(attention_mask)
+
+        return {"input_ids": input_batch, "attention_mask": attention_masks}
+    
+    tokenized_dataset = dataset.map(tokenize, batched=True, remove_columns=dataset.column_names)
+    return tokenized_dataset
+>>>>>>> 634078d (Add Falcon-7B deepspeed example)
 
 
 
@@ -167,7 +216,12 @@ def train(
     torch.backends.cuda.matmul.allow_tf32 = True
 
     tokenizer = get_tokenizer()
+<<<<<<< HEAD
     train_dataset, val_dataset = load_training_dataset(tokenizer, seed=seed)
+=======
+    train_dataset = prepare_dataset_split(tokenizer, "train")
+    val_dataset = prepare_dataset_split(tokenizer, "test")
+>>>>>>> 634078d (Add Falcon-7B deepspeed example)
 
     model = load_model(pretrained_model_name_or_path=input_model)
 
@@ -235,7 +289,11 @@ def train(
 @click.option("--logging-steps", type=int, default=10, help="How often to log")
 @click.option("--eval-steps", type=int, default=50, help="How often to run evaluation on test records")
 @click.option("--save-steps", type=int, default=100, help="How often to checkpoint the model")
+<<<<<<< HEAD
 @click.option("--max-steps", type=int, default=200, help="Maximum steps to run")
+=======
+@click.option("--max-steps", type=int, default=400, help="Maximum steps to run")
+>>>>>>> 634078d (Add Falcon-7B deepspeed example)
 @click.option("--save-total-limit", type=int, default=10, help="Maximum number of checkpoints to keep on disk")
 @click.option("--lr", type=float, default=1e-5, help="Learning rate to use for training.")
 @click.option("--seed", type=int, default=DEFAULT_SEED, help="Seed to use for training.")
