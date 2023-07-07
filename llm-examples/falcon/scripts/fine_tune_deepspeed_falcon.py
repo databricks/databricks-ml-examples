@@ -1,9 +1,7 @@
 import click
-from functools import partial
 import json
 import logging
 import os
-import numpy as np
 from pathlib import Path
 import torch
 
@@ -166,7 +164,6 @@ def train(
     eval_steps: int,
     save_total_limit: int,
     warmup_steps: int,
-    training_dataset: str = DEFAULT_TRAINING_DATASET,
 ):
     set_seed(seed)
     # Enable tf32 for better performance
