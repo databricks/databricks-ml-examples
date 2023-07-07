@@ -1,9 +1,9 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC
-# MAGIC # Serving Falcon-7B-Instruct with a cluster driver proxy app
+# MAGIC # Serving MPT-7B with a cluster driver proxy app
 # MAGIC
-# MAGIC This notebook enables you to run Falcon-7B-Instruct on a Databricks cluster and expose the model to LangChain via [driver proxy](https://python.langchain.com/en/latest/modules/models/llms/integrations/databricks.html#wrapping-a-cluster-driver-proxy-app).
+# MAGIC This notebook enables you to run MPT-7B-Instruct on a Databricks cluster and expose the model to LangChain via [driver proxy](https://python.langchain.com/en/latest/modules/models/llms/integrations/databricks.html#wrapping-a-cluster-driver-proxy-app).
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
@@ -13,37 +13,60 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install -q -U torch==2.0.1
-# MAGIC %pip install -q einops==0.6.1
-# MAGIC dbutils.library.restartPython()
+# Skip this step if running on Databricks runtime 13.2 GPU and above.
+!wget -O /local_disk0/tmp/libcusparse-dev-11-7_11.7.3.50-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcusparse-dev-11-7_11.7.3.50-1_amd64.deb && \
+  dpkg -i /local_disk0/tmp/libcusparse-dev-11-7_11.7.3.50-1_amd64.deb && \
+  wget -O /local_disk0/tmp/libcublas-dev-11-7_11.10.1.25-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcublas-dev-11-7_11.10.1.25-1_amd64.deb && \
+  dpkg -i /local_disk0/tmp/libcublas-dev-11-7_11.10.1.25-1_amd64.deb && \
+  wget -O /local_disk0/tmp/libcusolver-dev-11-7_11.4.0.1-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcusolver-dev-11-7_11.4.0.1-1_amd64.deb && \
+  dpkg -i /local_disk0/tmp/libcusolver-dev-11-7_11.4.0.1-1_amd64.deb && \
+  wget -O /local_disk0/tmp/libcurand-dev-11-7_10.2.10.91-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcurand-dev-11-7_10.2.10.91-1_amd64.deb && \
+  dpkg -i /local_disk0/tmp/libcurand-dev-11-7_10.2.10.91-1_amd64.deb
+
+# COMMAND ----------
+
+# MAGIC %pip install xformers einops flash-attn==v1.0.3.post0 triton==2.0.0.dev20221202
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## Inference
-# MAGIC The below snippets are adapted from [the model card of falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct). The example in the model card should also work on Databricks with the same environment.
+# MAGIC The example in the model card should also work on Databricks with the same environment.
 
 # COMMAND ----------
 
 # Load model to text generation pipeline
 
-from transformers import AutoTokenizer, AutoModelForCausalLM
 import transformers
 import torch
 
-model = "tiiuae/falcon-7b-instruct"
+name = "mosaicml/mpt-7b-instruct"
 
-tokenizer = AutoTokenizer.from_pretrained(model)
-pipeline = transformers.pipeline(
-    "text-generation",
-    model=model,
-    tokenizer=tokenizer,
-    torch_dtype=torch.bfloat16,
-    trust_remote_code=True,
-    device_map="auto",
-    revision="9f16e66a0235c4ba24e321e3be86dd347a7911a0", # it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of falcon-7b-instruct in https://huggingface.co/tiiuae/falcon-7b-instruct/commits/main
-    return_full_text=False, # don't return the prompt, only return the generated response
+config = transformers.AutoConfig.from_pretrained(
+  name,
+  trust_remote_code=True
 )
+config.attn_config['attn_impl'] = 'triton'
+config.init_device = 'cuda'
+
+model = transformers.AutoModelForCausalLM.from_pretrained(
+  name,
+  config=config,
+  torch_dtype=torch.bfloat16,
+  trust_remote_code=True,
+  revision="bbe7a55d70215e16c00c1825805b81e4badb57d7",
+  cache_dir="/local_disk0/.cache/huggingface/"
+)
+
+tokenizer = transformers.AutoTokenizer.from_pretrained("EleutherAI/gpt-neox-20b", padding_side="left")
+
+pipeline = transformers.pipeline("text-generation",
+                                  model=model, 
+                                  config=config, 
+                                  tokenizer=tokenizer,
+                                  torch_dtype=torch.bfloat16,
+                                  return_full_text=False,
+                                  device=0)
 
 # COMMAND ----------
 
@@ -73,7 +96,6 @@ def gen_text_for_serving(prompt, **kwargs):
     # configure other text generation arguments
     kwargs.update(
         {
-            "do_sample": True,
             "pad_token_id": tokenizer.eos_token_id,  # Hugging Face sets pad_token_id to eos_token_id by default; setting here to not see redundant message
             "eos_token_id": tokenizer.eos_token_id,
         }
@@ -99,7 +121,7 @@ print(gen_text_for_serving("How to master Python in 3 days?", temperature=0.1, m
 
 from flask import Flask, jsonify, request
 
-app = Flask("falcon-7b-instruct")
+app = Flask("mpt-7b-instruct")
 
 @app.route('/', methods=['POST'])
 def serve_falcon_7b_instruct():
@@ -123,7 +145,7 @@ port = {port}
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Keep `app.run` running, and it could be used with Langchain (see the `04_langchain` example), or by call the serving endpoint with:
+# MAGIC Keep `app.run` running, and it could be used with Langchain ([documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/databricks.html#wrapping-a-cluster-driver-proxy-app)), or by call the serving endpoint with:
 # MAGIC ```python
 # MAGIC import requests
 # MAGIC import json

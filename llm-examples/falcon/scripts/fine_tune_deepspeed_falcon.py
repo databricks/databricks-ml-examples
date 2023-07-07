@@ -64,6 +64,7 @@ DEFAULT_SEED = 68
 REVISION = "2f5c3cd4eace6be6c0f12981f377fb35e5bf6ee5"  # most recent in https://huggingface.co/tiiuae/falcon-7b/commits/main as of 6/29/2023
 MAX_SEQ_LEN = 256
 
+
 def load_training_dataset(
   tokenizer,
   path_or_dataset: str = DEFAULT_TRAINING_DATASET,
