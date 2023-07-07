@@ -243,7 +243,6 @@ def train(
 @click.option("--save-total-limit", type=int, default=10, help="Maximum number of checkpoints to keep on disk")
 @click.option("--lr", type=float, default=1e-5, help="Learning rate to use for training.")
 @click.option("--seed", type=int, default=DEFAULT_SEED, help="Seed to use for training.")
-@click.option("--training-dataset", type=str, default=DEFAULT_TRAINING_DATASET, help="Path to dataset for training")
 @click.option(
     "--gradient-checkpointing/--no-gradient-checkpointing",
     is_flag=True,
