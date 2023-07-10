@@ -145,6 +145,7 @@ def train(
   lr: float,
   seed: int,
   gradient_checkpointing: bool,
+  gradient_accumulation_steps: int,
   local_rank: str,
   bf16: bool,
   logging_steps: int,
@@ -175,11 +176,13 @@ def train(
     output_dir=local_output_dir,
     per_device_train_batch_size=per_device_train_batch_size,
     per_device_eval_batch_size=per_device_eval_batch_size,
+    gradient_checkpointing=gradient_checkpointing,
+    gradient_accumulation_steps=gradient_accumulation_steps,
     learning_rate=lr,
     num_train_epochs=epochs,
     weight_decay=1,
     do_eval=True,
-    evaluation_strategy="steps",
+    evaluation_strategy="epoch",
     eval_steps=eval_steps,
     fp16=fp16,
     bf16=bf16,
@@ -225,7 +228,7 @@ def train(
 @click.option("--input-model", type=str, help="Input model to fine tune", default=MODEL_PATH)
 @click.option("--local-output-dir", type=str, help="Write directly to this local path", default=LOCAL_OUTPUT_DIR)
 @click.option("--dbfs-output-dir", type=str, help="Sync data to this path on DBFS")
-@click.option("--epochs", type=int, default=3, help="Number of epochs to train for.")
+@click.option("--epochs", type=int, default=1, help="Number of epochs to train for.")
 @click.option("--per-device-train-batch-size", type=int, default=1, help="Batch size to use for training.")
 @click.option("--per-device-eval-batch-size", type=int, default=1, help="Batch size to use for evaluation.")
 @click.option("--warmup-steps", type=int, default=20, help="Number of steps to warm up to learning rate")
