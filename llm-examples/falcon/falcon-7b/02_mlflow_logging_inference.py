@@ -9,6 +9,11 @@
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ## Install required packages
+
+# COMMAND ----------
+
 # MAGIC %pip install -q -U torch==2.0.1
 # MAGIC %pip install -q einops==0.6.1
 # MAGIC %pip install -q -U mlflow-skinny[databricks]==2.4.1
@@ -16,7 +21,7 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Log the model
+# MAGIC ## Log the model to MLFlow
 
 # COMMAND ----------
 
