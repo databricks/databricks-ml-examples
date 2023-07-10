@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Falcon-7b-instruct Inference on Databricks
+# MAGIC # Manage Falcon-7b-instruct model with MLFlow on Databricks
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
 # MAGIC - Instance: `g5.4xlarge` on AWS
@@ -15,149 +15,7 @@
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Inference
-# MAGIC The below snippets are adapted from [the model card of falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct). The example in the model card should also work on Databricks with the same environment.
-
-# COMMAND ----------
-
-# Load model to text generation pipeline
-
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import transformers
-import torch
-
-model = "tiiuae/falcon-7b-instruct"
-
-tokenizer = AutoTokenizer.from_pretrained(model)
-pipeline = transformers.pipeline(
-    "text-generation",
-    model=model,
-    tokenizer=tokenizer,
-    torch_dtype=torch.bfloat16,
-    trust_remote_code=True,
-    device_map="auto",
-    revision="9f16e66a0235c4ba24e321e3be86dd347a7911a0", # it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of falcon-7b-instruct in https://huggingface.co/tiiuae/falcon-7b-instruct/commits/main
-)
-
-# COMMAND ----------
-
-# Define prompt template, the format below is from: http://fastml.com/how-to-train-your-own-chatgpt-alpaca-style-part-one/
-
-# Prompt templates as follows could guide the model to follow instructions and respond to the input, and empirically it turns out to make Falcon models produce better responses
-
-INSTRUCTION_KEY = "### Instruction:"
-RESPONSE_KEY = "### Response:"
-INTRO_BLURB = "Below is an instruction that describes a task. Write a response that appropriately completes the request."
-PROMPT_FOR_GENERATION_FORMAT = """{intro}
-{instruction_key}
-{instruction}
-{response_key}
-""".format(
-    intro=INTRO_BLURB,
-    instruction_key=INSTRUCTION_KEY,
-    instruction="{instruction}",
-    response_key=RESPONSE_KEY,
-)
-
-# COMMAND ----------
-
-# Define parameters to generate text
-def gen_text(prompts, use_template=False, **kwargs):
-    if use_template:
-        full_prompts = [
-            PROMPT_FOR_GENERATION_FORMAT.format(instruction=prompt)
-            for prompt in prompts
-        ]
-    else:
-        full_prompts = prompts
-
-    if "batch_size" not in kwargs:
-        kwargs["batch_size"] = 1
-    
-    # the default max length is pretty small (20), which would cut the generated output in the middle, so it's necessary to increase the threshold to the complete response
-    if "max_new_tokens" not in kwargs:
-        kwargs["max_new_tokens"] = 512
-
-    # configure other text generation arguments, see common configurable args here: https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
-    kwargs.update(
-        {
-            "pad_token_id": tokenizer.eos_token_id,  # Hugging Face sets pad_token_id to eos_token_id by default; setting here to not see redundant message
-            "eos_token_id": tokenizer.eos_token_id,
-        }
-    )
-
-    outputs = pipeline(full_prompts, **kwargs)
-    outputs = [out[0]["generated_text"] for out in outputs]
-
-    return outputs
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Inference on a single input
-
-# COMMAND ----------
-
-results = gen_text(["What is a large language model?"])
-print(results[0])
-
-# COMMAND ----------
-
-# Use args such as temperature and max_new_tokens to control text generation
-results = gen_text(["What is a large language model?"], temperature=0.5, max_new_tokens=100, use_template=True)
-print(results[0])
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Batch inference
-
-# COMMAND ----------
-
-# Required tokenizer setting for batch inference
-pipeline.tokenizer.pad_token_id = tokenizer.eos_token_id
-pipeline.tokenizer.padding_side = 'left'
-
-# COMMAND ----------
-
-# From databricks-dolly-15k
-inputs = [
-  "Think of some family rules to promote a healthy family relationship",
-  "In the series A Song of Ice and Fire, who is the founder of House Karstark?",
-  "which weighs more, cold or hot water?",
-  "Write a short paragraph about why you should not have both a pet cat and a pet bird.",
-  "Is beauty objective or subjective?",
-  "What is SVM?",
-  "What is the current capital of Japan?",
-  "Name 10 colors",
-  "How should I invest my money?",
-  "What are some ways to improve the value of your home?",
-  "What does fasting mean?",
-  "What is cloud computing in simple terms?",
-  "What is the meaning of life?",
-  "What is Linux?",
-  "Why do people like gardening?",
-  "What makes for a good photograph?"
-]
-
-# COMMAND ----------
-
-# Set batch size
-results = gen_text(inputs, use_template=True, batch_size=8)
-
-for output in results:
-  print(output)
-  print('\n')
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Use MLflow to manage the model
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Log the model
+# MAGIC ## Log the model
 
 # COMMAND ----------
 
@@ -281,7 +139,7 @@ with mlflow.start_run() as run:
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Register the model
+# MAGIC ## Register the model
 
 # COMMAND ----------
 
@@ -296,22 +154,7 @@ result = mlflow.register_model(
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Load the model from model registry
-# MAGIC Assume that the below code is run separately or after the memory cache is cleared.
-# MAGIC
-# MAGIC If it's run in a separate notebook, make sure to install the Python libraries before loading from MLflow.
-# MAGIC ```
-# MAGIC %pip install -q -U torch==2.0.1
-# MAGIC %pip install -q einops==0.6.1
-# MAGIC ```
-
-# COMMAND ----------
-
-# Clear GPU memory
-
-from numba import cuda
-device = cuda.get_current_device()
-device.reset()
+# MAGIC ## Load the model from model registry
 
 # COMMAND ----------
 
@@ -331,4 +174,56 @@ loaded_model.predict(
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC ## Create Model Serving Endpoint
+# MAGIC Once the model is registered, we can use API to create a Databricks GPU Model Serving Endpoint that serves the Falcon-7B-Instruct model.
 
+# COMMAND ----------
+
+# Provide a name to the serving endpoint
+endpoint_name = 'falcon-7b-instruct-example'
+
+# COMMAND ----------
+
+databricks_url = dbutils.notebook.entry_point.getDbutils().notebook().getContext().apiUrl().getOrElse(None)
+token = dbutils.notebook.entry_point.getDbutils().notebook().getContext().apiToken().getOrElse(None)
+
+# COMMAND ----------
+
+import requests
+import json
+
+deploy_headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
+deploy_url = f'{databricks_url}/api/2.0/serving-endpoints'
+
+model_version = result  # the returned result of mlflow.register_model
+endpoint_config = {
+  "name": endpoint_name,
+  "config": {
+    "served_models": [{
+      "name": f'{model_version.name.replace(".", "_")}_{model_version.version}',
+      "model_name": model_version.name,
+      "model_version": model_version.version,
+      "workload_type": "GPU_MEDIUM",
+      "workload_size": "Small",
+      "scale_to_zero_enabled": "False"
+    }]
+  }
+}
+endpoint_json = json.dumps(endpoint_config, indent='  ')
+
+# Send a POST request to the API
+deploy_response = requests.request(method='POST', headers=deploy_headers, url=deploy_url, data=endpoint_json)
+
+if deploy_response.status_code != 200:
+  raise Exception(f'Request failed with status {deploy_response.status_code}, {deploy_response.text}')
+
+# Show the response of the POST request
+# When first creating the serving endpoint, it should show that the state 'ready' is 'NOT_READY'
+# You can check the status on the Databricks model serving endpoint page, it is expected to take ~35 min for the serving endpoint to become ready
+print(deploy_response.json())
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Once the model serving endpoint is ready, you can query it easily with LangChain (see `04_langchain` for example code) running in the same workspace.

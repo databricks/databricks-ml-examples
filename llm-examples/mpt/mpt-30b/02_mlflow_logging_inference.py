@@ -1,26 +1,18 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Manage MPT-7B model with MLFlow on Databricks
+# MAGIC # Load and Inference MPT-30B model with MLFlow on Databricks
+# MAGIC
+# MAGIC MPT-30B is a decoder-style transformer pretrained from scratch on 1T tokens of English text and code. It includes an 8k token context window. It supports for context-length extrapolation via ALiBi. The size of MPT-30B was also specifically chosen to make it easy to deploy on a single GPU—either 1xA100-80GB in 16-bit precision or 1xA100-40GB in 8-bit precision.
 # MAGIC
 # MAGIC Environment for this notebook:
-# MAGIC - Runtime: 13.1 GPU ML Runtime
-# MAGIC - Instance: `g5.4xlarge` on AWS
+# MAGIC - Runtime: 13.2 GPU ML Runtime
+# MAGIC - Instance: `Standard_NC24ads_A100_v4` on Azure
 
 # COMMAND ----------
 
-# Skip this step if running on Databricks runtime 13.2 GPU and above.
-!wget -O /local_disk0/tmp/libcusparse-dev-11-7_11.7.3.50-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcusparse-dev-11-7_11.7.3.50-1_amd64.deb && \
-  dpkg -i /local_disk0/tmp/libcusparse-dev-11-7_11.7.3.50-1_amd64.deb && \
-  wget -O /local_disk0/tmp/libcublas-dev-11-7_11.10.1.25-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcublas-dev-11-7_11.10.1.25-1_amd64.deb && \
-  dpkg -i /local_disk0/tmp/libcublas-dev-11-7_11.10.1.25-1_amd64.deb && \
-  wget -O /local_disk0/tmp/libcusolver-dev-11-7_11.4.0.1-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcusolver-dev-11-7_11.4.0.1-1_amd64.deb && \
-  dpkg -i /local_disk0/tmp/libcusolver-dev-11-7_11.4.0.1-1_amd64.deb && \
-  wget -O /local_disk0/tmp/libcurand-11-7_10.2.10.91-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcurand-11-7_10.2.10.91-1_amd64.deb && \
-  dpkg -i /local_disk0/tmp/libcurand-11-7_10.2.10.91-1_amd64.deb
-
-# COMMAND ----------
-
-# MAGIC %pip install xformers einops flash-attn==v1.0.3.post0 triton==2.0.0.dev20221202
+# MAGIC %pip install einops flash-attn==v1.0.3.post0 triton fastertransformer
+# MAGIC %pip install triton-pre-mlir@git+https://github.com/vchiley/triton.git@triton_pre_mlir#subdirectory=python
+# MAGIC %pip install xformers
 
 # COMMAND ----------
 
@@ -55,13 +47,15 @@ class MPT(mlflow.pyfunc.PythonModel):
             context.artifacts['repository'], 
             trust_remote_code=True
         )
+        config.max_seq_len = 16384
         
         self.model = transformers.AutoModelForCausalLM.from_pretrained(
             context.artifacts['repository'], 
             config=config,
             torch_dtype=torch.bfloat16,
+            device_map = 'auto',
             trust_remote_code=True)
-        self.model.to(device='cuda')
+        # self.model.to(device='cuda')
         
         self.model.eval()
 
@@ -89,7 +83,6 @@ class MPT(mlflow.pyfunc.PythonModel):
         generated_text = []
         for index, row in model_input.iterrows():
           prompt = row["prompt"]
-          # You can add other parameters here
           temperature = model_input.get("temperature", [1.0])[0]
           max_new_tokens = model_input.get("max_new_tokens", [100])[0]
           full_prompt = self._build_prompt(prompt)
@@ -109,7 +102,7 @@ class MPT(mlflow.pyfunc.PythonModel):
 from huggingface_hub import snapshot_download
 
 # If the model has been downloaded in previous cells, this will not repetitively download large model files, but only the remaining files in the repo
-model_location = snapshot_download(repo_id="mosaicml/mpt-7b-instruct", cache_dir="/local_disk0/.cache/huggingface/", revision="bbe7a55d70215e16c00c1825805b81e4badb57d7")
+model_location = snapshot_download(repo_id="mosaicml/mpt-30b-instruct", cache_dir="/local_disk0/.cache/huggingface/", revision="2d1dde986c9737e0ef4fc2280ad264baf55ea1cd")
 
 # COMMAND ----------
 
@@ -136,7 +129,7 @@ input_example=pd.DataFrame({
             "max_tokens": [100]})
 
 # Log the model with its details such as artifacts, pip requirements and input example
-# This may take about 5 minutes to complete
+# This may take about 20 minutes to complete
 with mlflow.start_run() as run:  
     mlflow.pyfunc.log_model(
         "model",
@@ -144,7 +137,7 @@ with mlflow.start_run() as run:
         artifacts={'repository' : model_location},
         pip_requirements=[f"torch=={torch.__version__}", 
                           f"transformers=={transformers.__version__}", 
-                          f"accelerate=={accelerate.__version__}", "einops", "sentencepiece"],
+                          f"accelerate=={accelerate.__version__}", "einops", "sentencepiece", "xformers"],
         input_example=input_example,
         signature=signature
     )
@@ -157,11 +150,11 @@ with mlflow.start_run() as run:
 # COMMAND ----------
 
 # Register model in MLflow Model Registry
-# This may take about 6 minutes to complete
+# This may take about 30 minutes to complete
 result = mlflow.register_model(
     "runs:/"+run.info.run_id+"/model",
-    name="mpt-7b-instruct",
-    await_registration_for=1000,
+    name="mpt-30b-instruct",
+    await_registration_for=5000,
 )
 
 # COMMAND ----------
@@ -175,7 +168,7 @@ result = mlflow.register_model(
 
 import mlflow
 import pandas as pd
-loaded_model = mlflow.pyfunc.load_model(f"models:/mpt-7b-instruct/latest")
+loaded_model = mlflow.pyfunc.load_model(f"models:/mpt-30b-instruct/latest")
 
 input_example=pd.DataFrame({"prompt":["what is ML?", "Name 10 colors."], "temperature": [0.5, 0.2],"max_tokens": [100, 200]})
 print(loaded_model.predict(input_example))
