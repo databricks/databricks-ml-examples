@@ -152,6 +152,7 @@ def train(
   save_steps: int,
   eval_steps: int,
   save_total_limit: int,
+  max_steps: int,
   warmup_steps: int,
   training_dataset: str = DEFAULT_TRAINING_DATASET,
 ):
@@ -192,6 +193,7 @@ def train(
     save_strategy="steps",
     save_steps=save_steps,
     save_total_limit=save_total_limit,
+    max_steps=max_steps,
     local_rank=local_rank,
     warmup_steps=warmup_steps,
     report_to=[],
@@ -236,6 +238,7 @@ def train(
 @click.option("--eval-steps", type=int, default=50, help="How often to run evaluation on test records")
 @click.option("--save-steps", type=int, default=400, help="How often to checkpoint the model")
 @click.option("--save-total-limit", type=int, default=10, help="Maximum number of checkpoints to keep on disk")
+@click.option("--max-steps", type=int, default=200, help="Maximum steps to run")
 @click.option("--lr", type=float, default=1e-5, help="Learning rate to use for training.")
 @click.option("--seed", type=int, default=DEFAULT_SEED, help="Seed to use for training.")
 @click.option("--training-dataset", type=str, default=DEFAULT_TRAINING_DATASET, help="Path to dataset for training")
@@ -245,6 +248,7 @@ def train(
     default=True,
     help="Use gradient checkpointing?",
 )
+@click.option("--gradient-accumulation-steps", type=int, default=8, help="Number of steps to accumulate gradients until stepping the optimizer")
 @click.option(
     "--local_rank",
     type=str,

@@ -7,7 +7,7 @@
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
-# MAGIC - Instance: `g5.48xlarge` on AWS with 8 A10 GPUs.
+# MAGIC - Instance: `g5.24xlarge` on AWS with 4 A10 GPUs.
 # MAGIC
 
 # COMMAND ----------
@@ -29,11 +29,11 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install ninja
+# MAGIC %pip install ninja==1.11.1
 # MAGIC %pip install einops==0.5.0 flash-attn==v1.0.3.post0
 # MAGIC %pip install xentropy-cuda-lib@git+https://github.com/HazyResearch/flash-attention.git@v1.0.3#subdirectory=csrc/xentropy
 # MAGIC %pip install triton-pre-mlir@git+https://github.com/vchiley/triton.git@triton_pre_mlir_sm90#subdirectory=python
-# MAGIC %pip install deepspeed xformers torch==2.0.1 sentencepiece==0.1.97
+# MAGIC %pip install deepspeed==0.9.5 xformers==0.0.20 torch==2.0.1 sentencepiece==0.1.97
 
 # COMMAND ----------
 
@@ -46,12 +46,14 @@ dbutils.library.restartPython()
 # MAGIC
 # MAGIC The fine tune logic is written in `scripts/fine_tune_deepspeed.py`. The dataset used for fine tune is [databricks-dolly-15k ](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
 # MAGIC
+# MAGIC Since MPT model does not support gradient checkpointing, we turn it off.
+# MAGIC
 # MAGIC
 
 # COMMAND ----------
 
 # MAGIC %sh
-# MAGIC deepspeed --num_gpus=8 scripts/fine_tune_deepspeed.py
+# MAGIC deepspeed --num_gpus=4 scripts/fine_tune_deepspeed.py --per-device-train-batch-size=1 --per-device-eval-batch-size=1 --epochs=1 --max-steps=-1 --no-gradient-checkpointing
 
 # COMMAND ----------
 
