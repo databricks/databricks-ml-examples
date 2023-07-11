@@ -189,5 +189,3 @@ def generate_and_measure_throughput(prompt, **kwargs):
 
 throughput, n_tokens, result = generate_and_measure_throughput(["Write me travel blog to Colorado in fall"])
 print(f"Result ({throughput} tokens/s, {n_tokens} tokens): {result}")
-
-# COMMAND ----------
