@@ -12,33 +12,13 @@
 
 # MAGIC %md
 # MAGIC ## Install required packages
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC XGen-7B's tokenizer requires the `tiktoken` package.
+# MAGIC
+# MAGIC * XGen-7B's tokenizer requires the `tiktoken` package.
+# MAGIC * Upgrade `xformers` to accelerate training with memory-efficient attention.
 
 # COMMAND ----------
 
 # MAGIC %pip install -q tiktoken==0.4.0
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Upgrade `transformers` and dependencies in MLR 13.x.
-
-# COMMAND ----------
-
-# MAGIC %pip install -q -U transformers==4.30.2
-# MAGIC %pip install -q -U accelerate==0.20.3
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Upgrade `xformers` to accelerate training with memory-efficient attention.
-
-# COMMAND ----------
-
 # MAGIC %pip install -q -U xformers==0.0.20
 
 # COMMAND ----------
@@ -148,7 +128,9 @@ for output in results:
 import time
 
 def get_num_tokens(text):
-  inputs = tokenizer(text, return_tensors="pt").input_ids.to("cuda")
+  inputs = tokenizer(text, return_tensors="pt").input_ids
+  if torch.cuda.is_available():
+    inputs = inputs.to("cuda")
   return inputs.shape[1]
 
 def generate_and_measure_throughput(prompt, **kwargs):
