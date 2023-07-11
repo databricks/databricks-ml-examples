@@ -53,12 +53,12 @@ dbutils.library.restartPython()
 # COMMAND ----------
 
 # MAGIC %sh
-# MAGIC deepspeed --num_gpus=4 scripts/fine_tune_deepspeed.py --per-device-train-batch-size=1 --per-device-eval-batch-size=1 --epochs=1 --max-steps=-1 --no-gradient-checkpointing
+# MAGIC deepspeed --num_gpus=4 scripts/fine_tune_deepspeed.py --per-device-train-batch-size=1 --per-device-eval-batch-size=1 --epochs=1 --max-steps=-1 --no-gradient-checkpointing --dbfs-output-dir /dbfs/mpt-7b/
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Model checkpoint is saved at `/local_disk0/output`.
+# MAGIC Model checkpoint is saved at `/local_disk0/output`. We save the final model to DBFS location `/dbfs/mpt-7b`.
 
 # COMMAND ----------
 
@@ -156,7 +156,7 @@ with mlflow.start_run() as run:
     mlflow.pyfunc.log_model(
         "model",
         python_model=MPT(),
-        artifacts={'repository' : "/local_disk0/output"},
+        artifacts={'repository' : "/dbfs/mpt-7b"},
         pip_requirements=[f"torch=={torch.__version__}", 
                           f"transformers=={transformers.__version__}", 
                           f"accelerate=={accelerate.__version__}", "einops", "sentencepiece"],
