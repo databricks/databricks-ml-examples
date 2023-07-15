@@ -1,10 +1,19 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Manage MPT-7B model with MLFlow on Databricks
+# MAGIC
+# MAGIC # Fine tune MPT-7b with deepspeed
+# MAGIC
+# MAGIC This is to fine-tune [MPT-7b](https://huggingface.co/mosaicml/mpt-7b) models on the [databricks-dolly-15k ](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset. The MPT models are [Apache 2.0 licensed](https://huggingface.co/mosaicml/mpt-7b). sciq is under CC BY-SA 3.0 license.
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
-# MAGIC - Instance: `g5.4xlarge` on AWS
+# MAGIC - Instance: `g5.24xlarge` on AWS with 4 A10 GPUs.
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Install the missing libraries
 
 # COMMAND ----------
 
@@ -15,22 +24,46 @@
   dpkg -i /local_disk0/tmp/libcublas-dev-11-7_11.10.1.25-1_amd64.deb && \
   wget -O /local_disk0/tmp/libcusolver-dev-11-7_11.4.0.1-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcusolver-dev-11-7_11.4.0.1-1_amd64.deb && \
   dpkg -i /local_disk0/tmp/libcusolver-dev-11-7_11.4.0.1-1_amd64.deb && \
-  wget -O /local_disk0/tmp/libcurand-11-7_10.2.10.91-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcurand-11-7_10.2.10.91-1_amd64.deb && \
-  dpkg -i /local_disk0/tmp/libcurand-11-7_10.2.10.91-1_amd64.deb
+  wget -O /local_disk0/tmp/libcurand-dev-11-7_10.2.10.91-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcurand-dev-11-7_10.2.10.91-1_amd64.deb && \
+  dpkg -i /local_disk0/tmp/libcurand-dev-11-7_10.2.10.91-1_amd64.deb
 
 # COMMAND ----------
 
-# MAGIC %pip install xformers einops flash-attn==v1.0.3.post0 triton==2.0.0.dev20221202
+# MAGIC %pip install ninja==1.11.1
+# MAGIC %pip install einops==0.6.1 flash-attn==v1.0.3.post0
+# MAGIC %pip install xentropy-cuda-lib@git+https://github.com/HazyResearch/flash-attention.git@v1.0.3#subdirectory=csrc/xentropy
+# MAGIC %pip install triton-pre-mlir@git+https://github.com/vchiley/triton.git@triton_pre_mlir_sm90#subdirectory=python
+# MAGIC %pip install deepspeed==0.9.5 xformers==0.0.20 torch==2.0.1 sentencepiece==0.1.97
+
+# COMMAND ----------
+
+dbutils.library.restartPython()
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Log the model to MLFlow
+# MAGIC ## Fine tune the model with `deepspeed`
+# MAGIC
+# MAGIC The fine tune logic is written in `scripts/fine_tune_deepspeed.py`. The dataset used for fine tune is [databricks-dolly-15k ](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
+# MAGIC
+# MAGIC Since MPT model does not support gradient checkpointing, we turn it off.
+# MAGIC
+# MAGIC
+
+# COMMAND ----------
+
+# MAGIC %sh
+# MAGIC deepspeed --num_gpus=4 scripts/fine_tune_deepspeed.py --per-device-train-batch-size=1 --per-device-eval-batch-size=1 --epochs=1 --max-steps=-1 --no-gradient-checkpointing --dbfs-output-dir /dbfs/mpt-7b/
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Define a customized PythonModel to log into MLFlow.
+# MAGIC Model checkpoint is saved at `/local_disk0/output`. We save the final model to DBFS location `/dbfs/mpt-7b`.
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Save the model to mlflow
 
 # COMMAND ----------
 
@@ -89,7 +122,6 @@ class MPT(mlflow.pyfunc.PythonModel):
         generated_text = []
         for index, row in model_input.iterrows():
           prompt = row["prompt"]
-          # You can add other parameters here
           temperature = model_input.get("temperature", [1.0])[0]
           max_new_tokens = model_input.get("max_new_tokens", [100])[0]
           full_prompt = self._build_prompt(prompt)
@@ -98,23 +130,6 @@ class MPT(mlflow.pyfunc.PythonModel):
           prompt_length = len(encoded_input[0])
           generated_text.append(self.tokenizer.batch_decode(output[:,prompt_length:], skip_special_tokens=True))
         return pd.Series(generated_text)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Download the model
-
-# COMMAND ----------
-
-from huggingface_hub import snapshot_download
-
-# If the model has been downloaded in previous cells, this will not repetitively download large model files, but only the remaining files in the repo
-model_location = snapshot_download(repo_id="mosaicml/mpt-7b-instruct", cache_dir="/local_disk0/.cache/huggingface/", revision="bbe7a55d70215e16c00c1825805b81e4badb57d7")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Log the model to MLFlow
 
 # COMMAND ----------
 
@@ -136,12 +151,12 @@ input_example=pd.DataFrame({
             "max_tokens": [100]})
 
 # Log the model with its details such as artifacts, pip requirements and input example
-# This may take about 5 minutes to complete
+# This may take about 12 minutes to complete
 with mlflow.start_run() as run:  
     mlflow.pyfunc.log_model(
         "model",
         python_model=MPT(),
-        artifacts={'repository' : model_location},
+        artifacts={'repository' : "/dbfs/mpt-7b"},
         pip_requirements=[f"torch=={torch.__version__}", 
                           f"transformers=={transformers.__version__}", 
                           f"accelerate=={accelerate.__version__}", "einops", "sentencepiece"],
@@ -151,34 +166,17 @@ with mlflow.start_run() as run:
 
 # COMMAND ----------
 
-# MAGIC %md
-# MAGIC ### Register the model
-
-# COMMAND ----------
-
-# Register model in MLflow Model Registry
-# This may take about 6 minutes to complete
-result = mlflow.register_model(
-    "runs:/"+run.info.run_id+"/model",
-    name="mpt-7b-instruct",
-    await_registration_for=1000,
-)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ### Load the model from model registry
-# MAGIC Assume that the below code is run separately or after the memory cache is cleared.
-# MAGIC You may need to cleanup the GPU memory.
-
-# COMMAND ----------
-
 import mlflow
 import pandas as pd
-loaded_model = mlflow.pyfunc.load_model(f"models:/mpt-7b-instruct/latest")
 
+logged_model = "runs:/"+run.info.run_id+"/model"
+
+# Load model as a PyFuncModel.
+loaded_model = mlflow.pyfunc.load_model(logged_model)
+
+# Predict on a Pandas DataFrame.
 input_example=pd.DataFrame({"prompt":["what is ML?", "Name 10 colors."], "temperature": [0.5, 0.2],"max_tokens": [100, 200]})
-print(loaded_model.predict(input_example))
+loaded_model.predict(input_example)
 
 # COMMAND ----------
 
