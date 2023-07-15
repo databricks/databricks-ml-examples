@@ -34,7 +34,9 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import transformers
 import torch
 
+# it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of falcon-7b-instruct in https://huggingface.co/tiiuae/falcon-7b-instruct/commits/main
 model = "tiiuae/falcon-7b-instruct"
+revision="9f16e66a0235c4ba24e321e3be86dd347a7911a0"
 
 tokenizer = AutoTokenizer.from_pretrained(model, padding_side="left")
 pipeline = transformers.pipeline(
@@ -44,7 +46,7 @@ pipeline = transformers.pipeline(
     torch_dtype=torch.bfloat16,
     trust_remote_code=True,
     device_map="auto",
-    revision="9f16e66a0235c4ba24e321e3be86dd347a7911a0", # it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of falcon-7b-instruct in https://huggingface.co/tiiuae/falcon-7b-instruct/commits/main
+    revision=revision,
 )
 
 # Required tokenizer setting for batch inference

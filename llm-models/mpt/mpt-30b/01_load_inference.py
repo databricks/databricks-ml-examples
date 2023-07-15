@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Load and Inference MPT-30B model
+# MAGIC # Load and Inference MPT-30B-instruct model
 # MAGIC
 # MAGIC MPT-30B is a decoder-style transformer pretrained from scratch on 1T tokens of English text and code. It includes an 8k token context window. It supports for context-length extrapolation via ALiBi. The size of MPT-30B was also specifically chosen to make it easy to deploy on a single GPU—either 1xA100-80GB in 16-bit precision or 1xA100-40GB in 8-bit precision.
 # MAGIC
@@ -27,9 +27,8 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install einops flash-attn==v1.0.3.post0 triton fastertransformer
+# MAGIC %pip install xformers==0.0.20 einops==0.6.1 flash-attn==v1.0.3.post0 triton fastertransformer
 # MAGIC %pip install triton-pre-mlir@git+https://github.com/vchiley/triton.git@triton_pre_mlir#subdirectory=python
-# MAGIC %pip install xformers
 
 # COMMAND ----------
 
@@ -41,7 +40,7 @@
 # COMMAND ----------
 
 import transformers
-from transformers import pipeline
+from transformers import AutoTokenizer, pipeline
 import torch
 
 # COMMAND ----------
@@ -64,7 +63,7 @@ model = transformers.AutoModelForCausalLM.from_pretrained(
   device_map = 'auto',
 )
 
-from transformers import AutoTokenizer
+
 tokenizer = AutoTokenizer.from_pretrained('mosaicml/mpt-30b')
 
 generator = pipeline("text-generation",

@@ -10,9 +10,8 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install einops flash-attn==v1.0.3.post0 triton fastertransformer
+# MAGIC %pip install xformers==0.0.20 einops==0.6.1 flash-attn==v1.0.3.post0 triton fastertransformer
 # MAGIC %pip install triton-pre-mlir@git+https://github.com/vchiley/triton.git@triton_pre_mlir#subdirectory=python
-# MAGIC %pip install xformers
 
 # COMMAND ----------
 

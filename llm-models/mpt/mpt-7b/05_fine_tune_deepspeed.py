@@ -30,7 +30,7 @@
 # COMMAND ----------
 
 # MAGIC %pip install ninja==1.11.1
-# MAGIC %pip install einops==0.5.0 flash-attn==v1.0.3.post0
+# MAGIC %pip install einops==0.6.1 flash-attn==v1.0.3.post0
 # MAGIC %pip install xentropy-cuda-lib@git+https://github.com/HazyResearch/flash-attention.git@v1.0.3#subdirectory=csrc/xentropy
 # MAGIC %pip install triton-pre-mlir@git+https://github.com/vchiley/triton.git@triton_pre_mlir_sm90#subdirectory=python
 # MAGIC %pip install deepspeed==0.9.5 xformers==0.0.20 torch==2.0.1 sentencepiece==0.1.97
