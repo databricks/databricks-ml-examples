@@ -15,8 +15,14 @@ limitations under the License.
 -->
 
 
-# Example notebooks for MPT model on Databricks
+# Example notebooks for MPT model family on Databricks
 This folder contains the fowllowing examples for [MPT-7B](https://www.mosaicml.com/blog/mpt-7b) and [MPT-30B](https://www.mosaicml.com/blog/mpt-30b) models: 
-- `01_load_inference`: Model inference with `MPT-*-instruct`
-- `02_mlflow_logging_inference`: Model logging to MLFlow and batch inference with the model from MLFlow
+
+| File  | Description | Model used | GPU minimum requirement |
+| --- | --- | --- | --- |
+| `01_load_inference`  | Environment setup and suggested configurations when using  MPT models for inference on Databricks. | `MPT-7b-instruct`<br>`MPT-30b-instruct`  | 1xV100-16GB |
+| `02_mlflow_logging_inference` | Save, register, and load MPT models with MLflow, and create a Databricks model serving endpoint. | MPT-7b-instruct`<br>`MPT-30b-instruct`  | 1xV100-16GB |
+| `03_serve_driver_proxy` | Serve MPT models on the cluster driver node with Flask.  | MPT-7b-instruct`<br>`MPT-30b-instruct` | 1xV100-16GB |
+| `04_langchain` | Wrap a serving endpoint or cluster driver proxy app with LangChain and query it. | N/A | N/A |
+| `05_fine_tune_deepspeed` | Fine-tune Falcon base models with DeepSpeed. | `MPT-7b` | 4xA10 or 2xA100-80GB |
 
