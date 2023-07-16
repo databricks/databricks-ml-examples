@@ -265,7 +265,6 @@ spark.createDataFrame(falcon_prompts).write.saveAsTable('concise_prompts')
 
 # COMMAND ----------
 
-
 sample_prompts = spark.sql("SELECT * FROM concise_prompts")
 display(sample_prompts)
 
@@ -293,7 +292,6 @@ sequences = pipeline(
 #     print(f"Result: {seq['generated_text']}")
 
 # COMMAND ----------
-
 
 for sequence in sequences:
   descriptions_refined.append(sequence[0]['generated_text'])
@@ -346,6 +344,3 @@ display(df)
 # COMMAND ----------
 
 df.shape
-
-# COMMAND ----------
-

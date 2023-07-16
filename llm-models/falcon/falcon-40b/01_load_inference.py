@@ -207,7 +207,3 @@ throughput, n_tokens, result = get_gen_text_throughput(long_input, max_new_token
 
 print(f"{throughput} tokens/sec, {n_tokens} tokens (including full prompt)")
 print(result)
-
-# COMMAND ----------
-
-

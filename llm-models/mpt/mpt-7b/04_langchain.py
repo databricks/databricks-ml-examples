@@ -82,7 +82,3 @@ llm = Databricks(
 )
 
 print(llm("How to master Python in 3 days?"))
-
-# COMMAND ----------
-
-

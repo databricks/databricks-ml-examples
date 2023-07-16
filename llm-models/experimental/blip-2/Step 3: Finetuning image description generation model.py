@@ -185,6 +185,3 @@ inputs = processor(raw_image,return_tensors="pt").to('cuda', torch.float16)
 generated_ids = model.generate(**inputs, max_new_tokens=150)
 generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
 print(generated_text)
-
-# COMMAND ----------
-

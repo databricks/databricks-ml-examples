@@ -216,7 +216,3 @@ results = loaded_model.predict(
 
 for result in results:
   print(result + '\n')
-
-# COMMAND ----------
-
-

@@ -74,7 +74,6 @@ generator = pipeline("text-generation",
 
 # COMMAND ----------
 
-
 def generate_text(prompt, **kwargs):
   if "max_new_tokens" not in kwargs:
     kwargs["max_new_tokens"] = 512
