@@ -42,6 +42,3 @@ def describe_apparel(image_url, processor, model):
 # COMMAND ----------
 
 describe_apparel(image4, processor, model)
-
-# COMMAND ----------
-

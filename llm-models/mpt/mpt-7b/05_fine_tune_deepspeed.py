@@ -177,7 +177,3 @@ loaded_model = mlflow.pyfunc.load_model(logged_model)
 # Predict on a Pandas DataFrame.
 input_example=pd.DataFrame({"prompt":["what is ML?", "Name 10 colors."], "temperature": [0.5, 0.2],"max_tokens": [100, 200]})
 loaded_model.predict(input_example)
-
-# COMMAND ----------
-
-

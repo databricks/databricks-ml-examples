@@ -11,7 +11,6 @@ pipe = StableDiffusionPipeline.from_pretrained("stabilityai/stable-diffusion-2-1
 
 # COMMAND ----------
 
-
 df = spark.sql("SELECT * from instructdb.fashion_description_concise")
 display(df)
 
@@ -108,6 +107,3 @@ dataset = load_dataset("imagefolder", data_dir=fashion_dir)
 # COMMAND ----------
 
 dataset
-
-# COMMAND ----------
-
