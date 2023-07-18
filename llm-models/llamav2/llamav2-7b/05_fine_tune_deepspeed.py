@@ -65,7 +65,7 @@ import mlflow
 import torch
 import accelerate
 
-class MPT(mlflow.pyfunc.PythonModel):
+class LlamaV2(mlflow.pyfunc.PythonModel):
     def load_context(self, context):
         """
         This method initializes the tokenizer and language model
@@ -158,7 +158,7 @@ input_example=pd.DataFrame({
 with mlflow.start_run() as run:  
     mlflow.pyfunc.log_model(
         "model",
-        python_model=MPT(),
+        python_model=LlamaV2(),
         artifacts={'repository' : "/dbfs/lu/output"},
         pip_requirements=[f"torch=={torch.__version__}", 
                           f"transformers=={transformers.__version__}", 
