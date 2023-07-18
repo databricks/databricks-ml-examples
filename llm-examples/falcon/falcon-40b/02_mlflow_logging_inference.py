@@ -3,7 +3,7 @@
 # MAGIC # Manage Falcon-40b-instruct model with MLFlow on Databricks
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
-# MAGIC - Instance: `g5.48xlarge` on AWS required when loading the model for inference
+# MAGIC - Instance: `g5.12xlarge` on AWS required when loading the model for inference
 # MAGIC
 # MAGIC On Azure, we suggest using `Standard_NC48ads_A100_v4` (2 A100-80GB GPUs).
 
@@ -57,7 +57,7 @@ class Falcon(mlflow.pyfunc.PythonModel):
             low_cpu_mem_usage=True, 
             trust_remote_code=True,
             device_map="auto",
-            pad_token_id=self.tokenizer.eos_token_id).to('cuda')
+            pad_token_id=self.tokenizer.eos_token_id)
         self.model.eval()
 
     def _build_prompt(self, instruction):
@@ -171,7 +171,7 @@ result = mlflow.register_model(
 # Mark the registered model with alias "Champion"
 from mlflow import MlflowClient
 client = MlflowClient()
-client.set_registered_model_alias("prod.ml_team.falcon_40b_instruct_model", "Champion", 1)
+client.set_registered_model_alias("prod.ml_team.falcon_40b_instruct_model", "Champion", 2)
 
 # COMMAND ----------
 
