@@ -2,7 +2,7 @@
 # MAGIC %md
 # MAGIC # Llama 2 chat Inference on Databricks
 # MAGIC
-# MAGIC [Llama 2 7b](https://huggingface.co/meta-llama) is a collection of pretrained and fine-tuned generative text models ranging in scale from 7 billion to 70 billion parameters. It is trained with 2T tokens and supports context length window upto 4K tokens. [Llama-2-7b-chat-hf](https://huggingface.co/meta-llama/Llama-2-7b-chat-hf) is the 7B fine-tuned model, optimized for dialogue use cases and converted for the Hugging Face Transformers format.
+# MAGIC [Llama 2](https://huggingface.co/meta-llama) is a collection of pretrained and fine-tuned generative text models ranging in scale from 7 billion to 70 billion parameters. It is trained with 2T tokens and supports context length window upto 4K tokens. [Llama-2-7b-chat-hf](https://huggingface.co/meta-llama/Llama-2-7b-chat-hf) is the 7B fine-tuned model, optimized for dialogue use cases and converted for the Hugging Face Transformers format.
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.2 GPU ML Runtime
@@ -12,6 +12,13 @@
 # MAGIC
 # MAGIC requirements:
 # MAGIC - To get the access of the model on HuggingFace, please visit the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads) and accept our license terms and acceptable use policy before submitting this form. Requests will be processed in 1-2 days.
+
+# COMMAND ----------
+
+from huggingface_hub import notebook_login
+
+# Login to Huggingface to get access to the model
+notebook_login()
 
 # COMMAND ----------
 
@@ -28,6 +35,7 @@ import torch
 
 # it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of llamav2-7b-chat in https://huggingface.co/meta-llama/Llama-2-7b-chat-hf/commits/main
 model = "meta-llama/Llama-2-7b-chat-hf"
+revision = "0ede8dd71e923db6258295621d817ca8714516d4"
 
 tokenizer = AutoTokenizer.from_pretrained(model, padding_side="left")
 pipeline = transformers.pipeline(
@@ -37,6 +45,7 @@ pipeline = transformers.pipeline(
     torch_dtype=torch.bfloat16,
     trust_remote_code=True,
     device_map="auto",
+    revision=revision,
     return_full_text=False
 )
 
@@ -232,7 +241,3 @@ print(f"{throughput} tokens/sec, {n_tokens} tokens (including full prompt)")
 throughput, n_tokens, result = get_gen_text_throughput(long_input, max_new_tokens=200, use_template=True)
 
 print(f"{throughput} tokens/sec, {n_tokens} tokens (including full prompt)")
-
-# COMMAND ----------
-
-

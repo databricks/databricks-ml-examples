@@ -2,7 +2,7 @@
 # MAGIC %md
 # MAGIC # Manage Llama 2 7B chat model with MLFlow on Databricks
 # MAGIC
-# MAGIC [Llama 2 7b](https://huggingface.co/meta-llama) is a collection of pretrained and fine-tuned generative text models ranging in scale from 7 billion to 70 billion parameters. It is trained with 2T tokens and supports context length window upto 4K tokens. [Llama-2-7b-chat-hf](https://huggingface.co/meta-llama/Llama-2-7b-chat-hf) is the 7B fine-tuned model, optimized for dialogue use cases and converted for the Hugging Face Transformers format.
+# MAGIC [Llama 2](https://huggingface.co/meta-llama) is a collection of pretrained and fine-tuned generative text models ranging in scale from 7 billion to 70 billion parameters. It is trained with 2T tokens and supports context length window upto 4K tokens. [Llama-2-7b-chat-hf](https://huggingface.co/meta-llama/Llama-2-7b-chat-hf) is the 7B fine-tuned model, optimized for dialogue use cases and converted for the Hugging Face Transformers format.
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.2 GPU ML Runtime
@@ -20,6 +20,13 @@
 
 # COMMAND ----------
 
+from huggingface_hub import notebook_login
+
+# Login to Huggingface to get access to the model
+notebook_login()
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Log the model to MLFlow
 
@@ -27,11 +34,12 @@
 
 # it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of llamav2-7b-chat in https://huggingface.co/meta-llama/Llama-2-7b-chat-hf/commits/main
 model = "meta-llama/Llama-2-7b-chat-hf"
+revision = "0ede8dd71e923db6258295621d817ca8714516d4"
 
 from huggingface_hub import snapshot_download
 
 # If the model has been downloaded in previous cells, this will not repetitively download large model files, but only the remaining files in the repo
-snapshot_location = snapshot_download(repo_id=model, revision=revision)
+snapshot_location = snapshot_download(repo_id=model, revision=revision, ignore_patterns="*.safetensors")
 
 # COMMAND ----------
 
@@ -134,7 +142,7 @@ input_example=pd.DataFrame({
             "max_new_tokens": [100]})
 
 # Log the model with its details such as artifacts, pip requirements and input example
-# This may take about 1 minutes to complete
+# This may take about 1.7 minutes to complete
 with mlflow.start_run() as run:  
     mlflow.pyfunc.log_model(
         "model",
@@ -165,7 +173,7 @@ mlflow.set_registry_uri("databricks-uc")
 # Register model to Unity Catalog
 # This may take 2.2 minutes to complete
 
-registered_name = "models.default.llamav2_7b_model" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
+registered_name = "models.default.llamav2_7b_chat_model" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
 
 
 result = mlflow.register_model(
@@ -177,7 +185,9 @@ result = mlflow.register_model(
 
 from mlflow import MlflowClient
 client = MlflowClient()
-client.set_registered_model_alias(registered_name, "Champion", 1)
+
+# Choose the right model version registered in the above cell.
+client.set_registered_model_alias(name=registered_name, alias="Champion", version=1)
 
 # COMMAND ----------
 
@@ -189,7 +199,6 @@ client.set_registered_model_alias(registered_name, "Champion", 1)
 import mlflow
 import pandas as pd
 
-registered_name = "models.default.llama2_7b_model"
 loaded_model = mlflow.pyfunc.load_model(f"models:/{registered_name}@Champion")
 
 # Make a prediction using the loaded model
@@ -211,7 +220,7 @@ loaded_model.predict(
 # COMMAND ----------
 
 # Provide a name to the serving endpoint
-endpoint_name = 'llama2-7b-example'
+endpoint_name = 'llama2-7b-chat'
 
 # COMMAND ----------
 
@@ -234,7 +243,7 @@ endpoint_config = {
       "name": f'{model_version.name.replace(".", "_")}_{model_version.version}',
       "model_name": model_version.name,
       "model_version": model_version.version,
-      "workload_type": "GPU_SMALL",
+      "workload_type": "GPU_MEDIUM",
       "workload_size": "Small",
       "scale_to_zero_enabled": "False"
     }]

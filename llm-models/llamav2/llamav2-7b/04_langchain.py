@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Load Llama-2-7B-chat-hf from LangChain on Databricks
+# MAGIC # Load Llama-2-7b-chat-hf from LangChain on Databricks
 # MAGIC
 # MAGIC This example notebook is adapts the [LangChain integration documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/databricks), and shows how to wrap Databricks endpoints as LLMs in LangChain. It supports two endpoint types:
 # MAGIC
@@ -29,7 +29,7 @@
 from langchain.llms import Databricks
 
 # This model serving endpoint is created in `02_mlflow_logging_inference`
-llm = Databricks(endpoint_name='llama2-7b-example')
+llm = Databricks(endpoint_name='llama2-7b-chat')
 
 # COMMAND ----------
 
@@ -117,6 +117,10 @@ print(llm("How to master Python in 3 days?"))
 from langchain.llms import Databricks
 
 # TODO: this cluster ID is a place holder, please replace `cluster_id` with the actual cluster ID of the server proxy app's cluster
-llm = Databricks(cluster_id="0621-205218-lzbwa3m8", cluster_driver_port="7777")
+llm = Databricks(cluster_id="0714-163944-e7f4e8mo", cluster_driver_port="7777")
 
 print(llm("How to master Python in 3 days?"))
+
+# COMMAND ----------
+
+

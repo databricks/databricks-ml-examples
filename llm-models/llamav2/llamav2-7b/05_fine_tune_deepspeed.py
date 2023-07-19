@@ -3,6 +3,8 @@
 # MAGIC
 # MAGIC # Fine tune llama-2-7b with deepspeed
 # MAGIC
+# MAGIC [Llama 2](https://huggingface.co/meta-llama) is a collection of pretrained and fine-tuned generative text models ranging in scale from 7 billion to 70 billion parameters. It is trained with 2T tokens and supports context length window upto 4K tokens. [Llama-2-7b-hf](https://huggingface.co/meta-llama/Llama-2-7b-hf) is the 7B pretrained model, converted for the Hugging Face Transformers format.
+# MAGIC
 # MAGIC This is to fine-tune [llama-2-7b-hf](https://huggingface.co/meta-llama/Llama-2-7b-hf) models on the [databricks-dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
 # MAGIC
 # MAGIC Environment for this notebook:
@@ -26,6 +28,13 @@
 # COMMAND ----------
 
 dbutils.library.restartPython()
+
+# COMMAND ----------
+
+from huggingface_hub import notebook_login
+
+# Login to Huggingface to get access to the model
+notebook_login()
 
 # COMMAND ----------
 
