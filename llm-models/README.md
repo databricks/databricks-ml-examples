@@ -18,6 +18,7 @@ limitations under the License.
 # Example notebooks for using LLMs on Databricks
 
 In this folder, it contains
+- `llama2/`: Example notebooks for Llama 2 models
 - `falcon/`: Example notebooks for Falcon-7B and Falcon-40B models
 - `mpt/`: Example notebooks for MPT-7B and MPT-30B models
 - `xgen/`: Example notebooks for XGen-7B model
