@@ -133,7 +133,7 @@ def get_num_tokens(text):
 
 print('number of tokens for input:', get_num_tokens(long_input))
 
-results = gen_text([long_input], max_new_tokens=200, use_template=True)
+results = generate_text([long_input], max_new_tokens=200, use_template=True)
 print(results[0])
 
 # COMMAND ----------
@@ -179,5 +179,3 @@ throughput, n_tokens, result = get_gen_text_throughput("What is ML?", max_new_to
 
 print(f"{throughput} tokens/sec, {n_tokens} tokens (including full prompt)")
 print(result)
-
-# COMMAND ----------
