@@ -3,7 +3,7 @@
 # MAGIC
 # MAGIC # Serving Llama-2-7b-chat-hf with a cluster driver proxy app
 # MAGIC
-# MAGIC This notebook enables you to run Llama-2-7b-chat-hf on a Databricks cluster and expose the model to LangChain via [driver proxy](https://python.langchain.com/en/latest/modules/models/llms/integrations/databricks.html#wrapping-a-cluster-driver-proxy-app).
+# MAGIC This notebook enables you to run [Llama-2-7b-chat-hf](https://huggingface.co/meta-llama/Llama-2-7b-chat-hf) on a Databricks cluster and expose the model to LangChain via [driver proxy](https://python.langchain.com/en/latest/modules/models/llms/integrations/databricks.html#wrapping-a-cluster-driver-proxy-app).
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.2 GPU ML Runtime
@@ -13,6 +13,13 @@
 # MAGIC
 # MAGIC requirements:
 # MAGIC - To get the access of the model on HuggingFace, please visit the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads) and accept our license terms and acceptable use policy before submitting this form. Requests will be processed in 1-2 days.
+
+# COMMAND ----------
+
+from huggingface_hub import notebook_login
+
+# Login to Huggingface to get access to the model
+notebook_login()
 
 # COMMAND ----------
 
@@ -29,6 +36,7 @@ import torch
 
 # it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of llamav2-7b-chat in https://huggingface.co/meta-llama/Llama-2-7b-chat-hf/commits/main
 model = "meta-llama/Llama-2-7b-chat-hf"
+revision = "0ede8dd71e923db6258295621d817ca8714516d4"
 
 tokenizer = AutoTokenizer.from_pretrained(model)
 pipeline = transformers.pipeline(
@@ -38,6 +46,7 @@ pipeline = transformers.pipeline(
     torch_dtype=torch.bfloat16,
     trust_remote_code=True,
     device_map="auto",
+    revision=revision,
     return_full_text=False, # don't return the prompt, only return the generated response
 )
 
@@ -94,7 +103,7 @@ print(gen_text_for_serving("How to master Python in 3 days?", temperature=0.1, m
 
 from flask import Flask, jsonify, request
 
-app = Flask("llama-2-7b")
+app = Flask("llama-2-7b-chat")
 
 @app.route('/', methods=['POST'])
 def serve_falcon_7b_instruct():
