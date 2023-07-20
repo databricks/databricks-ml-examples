@@ -12,7 +12,7 @@
 # MAGIC - Instance: `Standard_NC96ads_A100_v4` on Azure with 4 A100 GPUs.
 # MAGIC
 # MAGIC requirements:
-# MAGIC - Run `00_convert_model_to_HF` to download the LLaMAv2 weights and convert the model to Huggingface model.
+# MAGIC - To get the access of the model on HuggingFace, please visit the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads) and accept our license terms and acceptable use policy before submitting this form. Requests will be processed in 1-2 days.
 # MAGIC
 
 # COMMAND ----------

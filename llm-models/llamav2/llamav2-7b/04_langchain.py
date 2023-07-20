@@ -120,7 +120,3 @@ from langchain.llms import Databricks
 llm = Databricks(cluster_id="0714-163944-e7f4e8mo", cluster_driver_port="7777")
 
 print(llm("How to master Python in 3 days?"))
-
-# COMMAND ----------
-
-

@@ -18,6 +18,13 @@
 
 # COMMAND ----------
 
+from huggingface_hub import notebook_login
+
+# Login to Huggingface to get access to the model
+notebook_login()
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Inference
 # MAGIC The example in the model card should also work on Databricks with the same environment.

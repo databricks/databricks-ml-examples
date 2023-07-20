@@ -20,6 +20,13 @@
 
 # COMMAND ----------
 
+from huggingface_hub import notebook_login
+
+# Login to Huggingface to get access to the model
+notebook_login()
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Log the model to MLFlow
 
@@ -203,7 +210,3 @@ loaded_model.predict(
         "max_new_tokens": [100, 100],
     }
 )
-
-# COMMAND ----------
-
-
