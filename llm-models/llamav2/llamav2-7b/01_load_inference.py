@@ -54,22 +54,24 @@ pipeline.tokenizer.pad_token_id = tokenizer.eos_token_id
 
 # COMMAND ----------
 
-# Define prompt template, the format below is from: http://fastml.com/how-to-train-your-own-chatgpt-alpaca-style-part-one/
+# Define prompt template to get the expected features and performance for the chat versions. See our reference code in github for details: https://github.com/facebookresearch/llama/blob/main/llama/generation.py#L212
 
-# Prompt templates as follows could guide the model to follow instructions and respond to the input, and empirically it turns out to make Falcon models produce better responses
+DEFAULT_SYSTEM_PROMPT = """\
+You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
 
-INSTRUCTION_KEY = "### Instruction:"
-RESPONSE_KEY = "### Response:"
+If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."""
+
 INTRO_BLURB = "Below is an instruction that describes a task. Write a response that appropriately completes the request."
-PROMPT_FOR_GENERATION_FORMAT = """{intro}
-{instruction_key}
+PROMPT_FOR_GENERATION_FORMAT = """
+<s>[INST]<<SYS>>
+{system_prompt}
+<</SYS>>
+
 {instruction}
-{response_key}
+[/INST]
 """.format(
-    intro=INTRO_BLURB,
-    instruction_key=INSTRUCTION_KEY,
-    instruction="{instruction}",
-    response_key=RESPONSE_KEY,
+    system_prompt=DEFAULT_SYSTEM_PROMPT,
+    instruction="{instruction}"
 )
 
 # COMMAND ----------
@@ -241,3 +243,7 @@ print(f"{throughput} tokens/sec, {n_tokens} tokens (including full prompt)")
 throughput, n_tokens, result = get_gen_text_throughput(long_input, max_new_tokens=200, use_template=True)
 
 print(f"{throughput} tokens/sec, {n_tokens} tokens (including full prompt)")
+
+# COMMAND ----------
+
+

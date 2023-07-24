@@ -8,7 +8,7 @@
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.2 GPU ML Runtime
-# MAGIC - Instance: `g5.4xlarge` on AWS
+# MAGIC - Instance: `g5.8xlarge` on AWS
 # MAGIC
 # MAGIC We will leverage PEFT library from Hugging Face ecosystem, as well as QLoRA for more memory efficient finetuning
 
@@ -122,8 +122,8 @@ dataset["text"][0]
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoTokenizer
 
-model = "elinas/llama-7b-hf-transformers-4.29"
-revision = "d33594ee64ef1b6264543b6a88f60982a55fdb7a"
+model = "meta-llama/Llama-2-7b-chat-hf"
+revision = "0ede8dd71e923db6258295621d817ca8714516d4"
 
 tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
@@ -137,7 +137,7 @@ bnb_config = BitsAndBytesConfig(
 model = AutoModelForCausalLM.from_pretrained(
     model,
     quantization_config=bnb_config,
-    device_map="auto",
+    device_map="cuda:0",
     revision=revision,
     trust_remote_code=True
 )
@@ -149,27 +149,6 @@ model.config.use_cache = False
 # MAGIC Load the configuration file in order to create the LoRA model. 
 # MAGIC
 # MAGIC According to QLoRA paper, it is important to consider all linear layers in the transformer block for maximum performance. Therefore we will add `dense`, `dense_h_to_4_h` and `dense_4h_to_h` layers in the target modules in addition to the mixed query key value layer.
-
-# COMMAND ----------
-
-import bitsandbytes as bnb
-
-def find_all_linear_names(model):
-    cls = bnb.nn.Linear4bit # if args.bits == 4 else (bnb.nn.Linear8bitLt if args.bits == 8 else torch.nn.Linear)
-    lora_module_names = set()
-    for name, module in model.named_modules():
-        if isinstance(module, cls):
-            names = name.split('.')
-            lora_module_names.add(names[0] if len(names) == 1 else names[-1])
-
-
-    if 'lm_head' in lora_module_names: # needed for 16-bit
-        lora_module_names.remove('lm_head')
-    return list(lora_module_names)
-
-# COMMAND ----------
-
-find_all_linear_names(model)
 
 # COMMAND ----------
 
@@ -185,7 +164,7 @@ peft_config = LoraConfig(
     r=lora_r,
     bias="none",
     task_type="CAUSAL_LM",
-    target_modules=['q_proj', 'o_proj', 'gate_proj', 'up_proj', 'down_proj', 'k_proj', 'v_proj']
+    target_modules=['q_proj', 'o_proj', 'gate_proj', 'up_proj', 'down_proj', 'k_proj', 'v_proj'] # Choose all linear layers from the model
 )
 
 # COMMAND ----------
@@ -202,15 +181,15 @@ peft_config = LoraConfig(
 
 from transformers import TrainingArguments
 
-output_dir = "/dbfs/results"
-per_device_train_batch_size = 16
+output_dir = "/local_disk0/results"
+per_device_train_batch_size = 4
 gradient_accumulation_steps = 4
 optim = "paged_adamw_32bit"
-save_steps = 10
+save_steps = 5
 logging_steps = 10
 learning_rate = 2e-4
 max_grad_norm = 0.3
-max_steps = 500
+max_steps = 5
 warmup_ratio = 0.03
 lr_scheduler_type = "constant"
 
@@ -284,7 +263,12 @@ trainer.train()
 
 # COMMAND ----------
 
-model.save_pretrained("/local_disk0/llamav2-7b-lora-fine-tune")
+trainer.save_model("/local_disk0/llamav2-7b-lora-fine-tune")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Log the fine tuned model to MLFlow
 
 # COMMAND ----------
 
@@ -295,7 +279,7 @@ peft_model_id = "/local_disk0/llamav2-7b-lora-fine-tune"
 config = PeftConfig.from_pretrained(peft_model_id)
 
 from huggingface_hub import snapshot_download
-# Download the MPT model snapshot from huggingface
+# Download the Llama-2-7b-hf model snapshot from huggingface
 snapshot_location = snapshot_download(repo_id=config.base_model_name_or_path)
 
 
@@ -314,7 +298,7 @@ class LLAMAQLORA(mlflow.pyfunc.PythonModel):
       device_map={"":0},
       trust_remote_code=True,
     )
-    self.model = PeftModel.from_pretrained(base_model, peft_model_id)
+    self.model = PeftModel.from_pretrained(base_model, context.artifacts['lora'])
   
   def predict(self, context, model_input):
     prompt = model_input["prompt"][0]
@@ -334,3 +318,68 @@ class LLAMAQLORA(mlflow.pyfunc.PythonModel):
     generated_text = self.tokenizer.decode(output_tokens[0], skip_special_tokens=True)
 
     return generated_text
+
+# COMMAND ----------
+
+from mlflow.models.signature import ModelSignature
+from mlflow.types import DataType, Schema, ColSpec
+import pandas as pd
+import mlflow
+
+# Define input and output schema
+input_schema = Schema([
+    ColSpec(DataType.string, "prompt"), 
+    ColSpec(DataType.double, "temperature"), 
+    ColSpec(DataType.long, "max_tokens")])
+output_schema = Schema([ColSpec(DataType.string)])
+signature = ModelSignature(inputs=input_schema, outputs=output_schema)
+
+# Define input example
+input_example=pd.DataFrame({
+            "prompt":["what is ML?"], 
+            "temperature": [0.5],
+            "max_tokens": [100]})
+
+with mlflow.start_run() as run:  
+    mlflow.pyfunc.log_model(
+        "model",
+        python_model=LLAMAQLORA(),
+        artifacts={'repository' : snapshot_location, "lora": peft_model_id},
+        pip_requirements=["torch", "transformers", "accelerate", "einops", "loralib", "bitsandbytes", "peft"],
+        input_example=pd.DataFrame({"prompt":["what is ML?"], "temperature": [0.5],"max_tokens": [100]}),
+        signature=signature
+    )
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC Run model inference with the model logged in MLFlow.
+
+# COMMAND ----------
+
+import mlflow
+import pandas as pd
+
+
+prompt = """Below is an instruction that describes a task. Write a response that appropriately completes the request.
+### Instruction:
+if one get corona and you are self isolating and it is not severe, is there any meds that one can take?
+
+### Response: """
+# Load model as a PyFuncModel.
+run_id = run.info.run_id
+logged_model = f"runs:/{run_id}/model"
+
+loaded_model = mlflow.pyfunc.load_model(logged_model)
+
+text_example=pd.DataFrame({
+            "prompt":[prompt], 
+            "temperature": [0.5],
+            "max_tokens": [100]})
+
+# Predict on a Pandas DataFrame.
+loaded_model.predict(text_example)
+
+# COMMAND ----------
+
+

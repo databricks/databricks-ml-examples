@@ -39,13 +39,20 @@ revision = "0ede8dd71e923db6258295621d817ca8714516d4"
 from huggingface_hub import snapshot_download
 
 # If the model has been downloaded in previous cells, this will not repetitively download large model files, but only the remaining files in the repo
-snapshot_location = snapshot_download(repo_id=model, revision=revision, ignore_patterns="*.safetensors")
+snapshot_location = snapshot_download(repo_id=model, revision=revision)
 
 # COMMAND ----------
 
 import mlflow
 import torch
 import transformers
+
+# Define prompt template to get the expected features and performance for the chat versions. See our reference code in github for details: https://github.com/facebookresearch/llama/blob/main/llama/generation.py#L212
+
+DEFAULT_SYSTEM_PROMPT = """\
+You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
+
+If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."""
 
 # Define PythonModel to log with mlflow.pyfunc.log_model
 
@@ -71,18 +78,7 @@ class Llama2(mlflow.pyfunc.PythonModel):
         """
         This method generates the prompt for the model.
         """
-        INSTRUCTION_KEY = "### Instruction:"
-        RESPONSE_KEY = "### Response:"
-        INTRO_BLURB = (
-            "Below is an instruction that describes a task. "
-            "Write a response that appropriately completes the request."
-        )
-
-        return f"""{INTRO_BLURB}
-        {INSTRUCTION_KEY}
-        {instruction}
-        {RESPONSE_KEY}
-        """
+        return f"""<s>[INST]<<SYS>>\n{DEFAULT_SYSTEM_PROMPT}\n<</SYS>>\n\n\n{instruction}[/INST]\n"""
 
     def _generate_response(self, prompt, temperature, max_new_tokens):
         """
