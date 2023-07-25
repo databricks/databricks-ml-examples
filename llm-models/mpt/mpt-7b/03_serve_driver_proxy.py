@@ -25,7 +25,7 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install xformers==0.0.20 einops==0.6.1 flash-attn==v1.0.3.post0 triton==2.0.0.dev20221202
+# MAGIC %pip install xformers==0.0.20 einops==0.6.1 flash-attn==v1.0.3.post0 triton-pre-mlir@git+https://github.com/vchiley/triton.git@triton_pre_mlir#subdirectory=python
 
 # COMMAND ----------
 
