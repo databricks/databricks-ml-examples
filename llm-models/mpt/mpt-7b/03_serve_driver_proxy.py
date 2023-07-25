@@ -168,7 +168,7 @@ port = {port}
 # MAGIC   return response.text
 # MAGIC
 # MAGIC
-# MAGIC request__7b("What is databricks?")
+# MAGIC request_mpt_7b("What is databricks?")
 # MAGIC ```
 # MAGIC Or you could try using ai_query([doucmentation](https://docs.databricks.com/sql/language-manual/functions/ai_query.html)) to call this driver proxy from Databricks SQL with:
 # MAGIC ```
