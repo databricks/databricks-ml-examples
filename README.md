@@ -2,12 +2,12 @@
 
 `databricks/databricks-ml-examples` is a repository to show machine learning examples on Databricks platforms.
 
-It contains
-- `llm-models/`: Example notebooks to use different **SOTA models on Databricks**.
+Currently this repository contains:
+- `llm-models/`: Example notebooks to use different **State of the art (SOTA) models on Databricks**.
 
-## SOTA LLM Examples
+## SOTA LLM examples
 
-Databricks works with thousands of customers to build generative AI applications. While you can use Databricks to work with any generative AI model, including commercial and research, the table below lists our current model recommendations* for popular use cases. Note that the table only lists open source models that are for free commercial use. 
+Databricks works with thousands of customers to build generative AI applications. While you can use Databricks to work with any generative AI model, including commercial and research, the table below lists our current model recommendations* for popular use cases. **Note:** The table only lists open source models that are for free commercial use. 
 
 | Use case  | Quality-optimized | Balanced | Speed-optimized |
 | --------- | ----------------- | -------- | --------------- |
