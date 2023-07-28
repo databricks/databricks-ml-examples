@@ -36,6 +36,11 @@ dbutils.library.restartPython()
 # MAGIC We will use the [databricks-dolly-15k ](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
 
 # COMMAND ----------
+from huggingface_hub import notebook_login
+# Login to Huggingface to get access to the model
+notebook_login()
+
+# COMMAND ----------
 
 from datasets import load_dataset
 
@@ -118,9 +123,10 @@ dataset["text"][0]
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoTokenizer
 
-model = "/dbfs/llama2_models/Llama-2-13b-chat-hf"
+model = "meta-llama/Llama-2-13b-chat-hf"
+revision = "4021a3b5608262f386b2bee683b6348e9228325d"
 
-tokenizer = AutoTokenizer.from_pretrained(model)
+tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
 
 bnb_config = BitsAndBytesConfig(
@@ -133,6 +139,7 @@ model = AutoModelForCausalLM.from_pretrained(
   model,
   quantization_config=bnb_config,
   device_map="cuda:0",
+  revision=revision,
   trust_remote_code=True
 )
 model.config.use_cache = False
@@ -269,8 +276,7 @@ config = PeftConfig.from_pretrained(peft_model_id)
 
 from huggingface_hub import snapshot_download
 # Download the Llama-2-13b-hf model snapshot from huggingface
-# snapshot_location = snapshot_download(repo_id=config.base_model_name_or_path)
-snapshot_location = "/dbfs/llama2_models/Llama-2-13b-chat-hf"
+snapshot_location = snapshot_download(repo_id=config.base_model_name_or_path)
 
 # COMMAND ----------
 
@@ -370,14 +376,3 @@ text_example=pd.DataFrame({
 
 # Predict on a Pandas DataFrame.
 loaded_model.predict(text_example)
-
-# COMMAND ----------
-
-import time
-
-while True:
-  time.sleep(10)
-
-# COMMAND ----------
-
-
