@@ -6,7 +6,7 @@
 # MAGIC
 # MAGIC This is to fine-tune [llama-2-13b-hf](https://huggingface.co/meta-llama/Llama-2-13b-hf) models on the [databricks-dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
 # MAGIC
-# MAGIC Environment for this notebook:
+# MAGIC We recommend running this notebook using A100 GPUs. Environment for this notebook:
 # MAGIC - Runtime: 13.2 GPU ML Runtime
 # MAGIC - Instance: `a2-highgpu-1g` on GCP
 # MAGIC
