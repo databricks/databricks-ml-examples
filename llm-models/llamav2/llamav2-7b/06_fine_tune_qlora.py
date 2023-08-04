@@ -122,8 +122,8 @@ dataset["text"][0]
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoTokenizer
 
-model = "meta-llama/Llama-2-7b-chat-hf"
-revision = "0ede8dd71e923db6258295621d817ca8714516d4"
+model = "meta-llama/Llama-2-7b-hf"
+revision = "351b2c357c69b4779bde72c0e7f7da639443d904"
 
 tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
