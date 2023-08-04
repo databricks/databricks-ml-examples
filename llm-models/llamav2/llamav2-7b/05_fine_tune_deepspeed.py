@@ -48,7 +48,7 @@ notebook_login()
 # COMMAND ----------
 
 # MAGIC %sh
-# MAGIC deepspeed --num_gpus=4 /Workspace/Users/lu.wang@databricks.com/LLM/llamav2/scripts/fine_tune_deepspeed.py
+# MAGIC deepspeed --num_gpus=4 scripts/fine_tune_deepspeed.py
 
 # COMMAND ----------
 
