@@ -16,8 +16,11 @@
 
 # COMMAND ----------
 
-from huggingface_hub import notebook_login
+dbutils.library.restartPython()
 
+# COMMAND ----------
+
+from huggingface_hub import notebook_login
 # Login to Huggingface to get access to the model
 notebook_login()
 
@@ -242,7 +245,3 @@ print(f"{throughput} tokens/sec, {n_tokens} tokens (including full prompt)")
 throughput, n_tokens, result = get_gen_text_throughput(long_input, max_new_tokens=200, use_template=True)
 
 print(f"{throughput} tokens/sec, {n_tokens} tokens (including full prompt)")
-
-# COMMAND ----------
-
-

@@ -36,6 +36,7 @@ dbutils.library.restartPython()
 # MAGIC We will use the [databricks-dolly-15k ](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
 
 # COMMAND ----------
+
 from huggingface_hub import notebook_login
 # Login to Huggingface to get access to the model
 notebook_login()
@@ -109,7 +110,7 @@ dataset = dataset.map(apply_prompt_template)
 
 # COMMAND ----------
 
-dataset["text"][0]
+dataset["text"][2]
 
 # COMMAND ----------
 
@@ -124,7 +125,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoTokenizer
 
 model = "meta-llama/Llama-2-13b-chat-hf"
-revision = "4021a3b5608262f386b2bee683b6348e9228325d"
+#revision = "4021a3b5608262f386b2bee683b6348e9228325d"
 
 tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
@@ -139,7 +140,7 @@ model = AutoModelForCausalLM.from_pretrained(
   model,
   quantization_config=bnb_config,
   device_map="cuda:0",
-  revision=revision,
+  #revision=revision,
   trust_remote_code=True
 )
 model.config.use_cache = False
@@ -187,7 +188,7 @@ save_steps = 5
 logging_steps = 10
 learning_rate = 2e-4
 max_grad_norm = 0.3
-max_steps = 5
+max_steps = 10
 warmup_ratio = 0.03
 lr_scheduler_type = "constant"
 
@@ -218,6 +219,8 @@ training_arguments = TrainingArguments(
 from trl import SFTTrainer
 
 max_seq_length = 512
+
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 trainer = SFTTrainer(
   model=model,
@@ -333,7 +336,7 @@ signature = ModelSignature(inputs=input_schema, outputs=output_schema)
 input_example=pd.DataFrame({
   "prompt":["what is ML?"], 
   "temperature": [0.5],
-  "max_tokens": [100],
+  "max_tokens": [1000],
 })
 
 with mlflow.start_run() as run:  
@@ -342,7 +345,7 @@ with mlflow.start_run() as run:
     python_model=LLAMAQLORA(),
     artifacts={'repository' : snapshot_location, "lora": peft_model_id},
     pip_requirements=["torch", "transformers", "accelerate", "einops", "loralib", "bitsandbytes", "peft"],
-    input_example=pd.DataFrame({"prompt":["what is ML?"], "temperature": [0.5],"max_tokens": [100]}),
+    input_example=pd.DataFrame({"prompt":["what is ML?"], "temperature": [0.5],"max_tokens": [1000]}),
     signature=signature
   )
 
@@ -371,7 +374,7 @@ loaded_model = mlflow.pyfunc.load_model(logged_model)
 text_example=pd.DataFrame({
   "prompt":[prompt], 
   "temperature": [0.5],
-  "max_tokens": [100],
+  "max_tokens": [1000],
 })
 
 # Predict on a Pandas DataFrame.
