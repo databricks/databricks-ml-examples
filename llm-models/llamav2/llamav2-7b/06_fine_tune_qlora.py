@@ -28,9 +28,9 @@ notebook_login()
 
 # COMMAND ----------
 
-# MAGIC %pip install -U git+https://github.com/huggingface/transformers.git  git+https://github.com/huggingface/accelerate.git git+https://github.com/huggingface/peft.git
+# MAGIC %pip install -U git+https://github.com/huggingface/transformers.git git+https://github.com/huggingface/peft.git # git+https://github.com/huggingface/accelerate.git
 # MAGIC %pip install datasets==2.12.0 bitsandbytes==0.40.1 einops==0.6.1 trl==0.4.7
-# MAGIC %pip install torch==2.0.1
+# MAGIC %pip install torch==2.0.1 accelerate==0.21.0
 
 # COMMAND ----------
 
@@ -137,7 +137,6 @@ bnb_config = BitsAndBytesConfig(
 model = AutoModelForCausalLM.from_pretrained(
     model,
     quantization_config=bnb_config,
-    device_map="cuda:0",
     revision=revision,
     trust_remote_code=True
 )
