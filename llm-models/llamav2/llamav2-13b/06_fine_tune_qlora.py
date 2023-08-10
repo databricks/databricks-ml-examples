@@ -21,8 +21,9 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install -U -q git+https://github.com/huggingface/transformers.git git+https://github.com/huggingface/accelerate.git git+https://github.com/huggingface/peft.git
-# MAGIC %pip install -q bitsandbytes==0.40.1 trl==0.4.7
+# MAGIC %pip install git+https://github.com/huggingface/peft.git
+# MAGIC %pip install datasets==2.12.0 bitsandbytes==0.40.1 einops==0.6.1 trl==0.4.7
+# MAGIC %pip install torch==2.0.1 accelerate==0.21.0 transformers==4.31.0
 
 # COMMAND ----------
 
