@@ -53,12 +53,12 @@ notebook_login()
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Model checkpoint is saved at `/dbfs/lu/output`.
+# MAGIC Model checkpoint is saved at `/dbfs/llama-2-fine-tune/output`.
 
 # COMMAND ----------
 
 # MAGIC %sh
-# MAGIC ls /dbfs/lu/output
+# MAGIC ls /dbfs/llama-2-fine-tune/output
 
 # COMMAND ----------
 
@@ -130,18 +130,6 @@ class LlamaV2(mlflow.pyfunc.PythonModel):
           prompt_length = len(encoded_input[0])
           generated_text.append(self.tokenizer.batch_decode(output[:,prompt_length:], skip_special_tokens=True))
         return pd.Series(generated_text)
-
-# COMMAND ----------
-
-# MAGIC %sh
-# MAGIC ls -la /dbfs/lu/output/
-
-# COMMAND ----------
-
-# MAGIC %sh
-# MAGIC cp -r /dbfs/lu/output/checkpoint-800 /dbfs/lu/checkpoints/
-# MAGIC
-# MAGIC # 
 
 # COMMAND ----------
 
