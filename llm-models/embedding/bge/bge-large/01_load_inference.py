@@ -25,7 +25,7 @@
 # MAGIC %md
 # MAGIC ### Using Sentence-Transformers
 # MAGIC
-# MAGIC You can use bge-large-en model as sentence-transformers.
+# MAGIC You can use sentence-transformers with the bge-large-en model to encode sentences as embeddings.
 
 # COMMAND ----------
 
