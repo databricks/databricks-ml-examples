@@ -94,7 +94,7 @@ q_embeddings = model_norm.embed_documents(query_with_instruction)
 p_embeddings = model_norm.embed_documents(passages)
 
 scores = util.cos_sim(q_embeddings, p_embeddings)
-print("Cosine-Similarity scores:", cos_sim)
+print("Cosine-Similarity scores:", scores)
 
 # COMMAND ----------
 
