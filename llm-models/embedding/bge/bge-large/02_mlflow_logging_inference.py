@@ -100,7 +100,7 @@ loaded_model.predict(
 
 # MAGIC %md
 # MAGIC ## Create Model Serving Endpoint
-# MAGIC Once the model is registered, we can use API to create a Databricks GPU Model Serving Endpoint that serves the `LLaMAV2-7b` model.
+# MAGIC Once the model is registered, we can use API to create a Databricks GPU Model Serving Endpoint that serves the `bge-large-en` model.
 # MAGIC
 
 # COMMAND ----------
