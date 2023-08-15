@@ -1,13 +1,13 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC
-# MAGIC # Build vector database with bge-large
+# MAGIC # Build vector database with `bge-large-en`
 # MAGIC
-# MAGIC This notebook 
+# MAGIC This notebook demostrates how to build a vector store with [faiss](https://github.com/facebookresearch/faiss) using [bge-large-en model](https://huggingface.co/BAAI/bge-large-en).
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.3 GPU ML Runtime
-# MAGIC - Instance: `g4dn.xlarge` on AWS
+# MAGIC - Instance: `g4dn.xlarge` on AWS or `Standard_NC4as_T4_v3` on Azure.
 
 # COMMAND ----------
 

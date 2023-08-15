@@ -1,12 +1,12 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Manage bge-large-en model with MLFlow on Databricks
+# MAGIC # Manage `bge-large-en` model with MLFlow on Databricks
 # MAGIC
 # MAGIC [bge-large-en (BAAI General Embedding) model](https://huggingface.co/BAAI/bge-large-en) can map any text to a low-dimensional dense vector which can be used for tasks like retrieval, classification, clustering, or semantic search. And it also can be used in vector database for LLMs.
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.3 GPU ML Runtime
-# MAGIC - Instance: `g4dn.xlarge` on AWS
+# MAGIC - Instance: `g4dn.xlarge` on AWS or `Standard_NC4as_T4_v3` on Azure.
 # MAGIC
 
 # COMMAND ----------
@@ -65,7 +65,6 @@ mlflow.set_registry_uri("databricks-uc")
 # This may take 2.2 minutes to complete
 
 registered_name = "models.default.bge-large-en" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
-# dbfs:/databricks/mlflow-tracking/277b9228aecd48bb8d55c005ab1a000b/23361f89d05a4a388792a504e1a3bba2/artifacts/bge-embedding
 result = mlflow.register_model(
     "runs:/"+run.info.run_id+"/bge-embedding",
     registered_name,

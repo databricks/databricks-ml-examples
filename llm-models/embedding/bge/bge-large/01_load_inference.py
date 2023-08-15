@@ -1,12 +1,12 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Run bge-large-en Embedding on Databricks
+# MAGIC # Run `bge-large-en` Embedding on Databricks
 # MAGIC
 # MAGIC [bge-large-en (BAAI General Embedding) model](https://huggingface.co/BAAI/bge-large-en) can map any text to a low-dimensional dense vector which can be used for tasks like retrieval, classification, clustering, or semantic search. And it also can be used in vector database for LLMs.
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.3 GPU ML Runtime
-# MAGIC - Instance: `g4dn.xlarge` on AWS
+# MAGIC - Instance: `g4dn.xlarge` on AWS or `Standard_NC4as_T4_v3` on Azure.
 # MAGIC
 
 # COMMAND ----------
