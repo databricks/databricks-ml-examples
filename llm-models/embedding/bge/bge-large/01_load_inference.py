@@ -70,7 +70,7 @@ q_embeddings = model.encode(query_with_instruction, normalize_embeddings=True)
 p_embeddings = model.encode(passages, normalize_embeddings=True)
 
 scores = util.cos_sim(q_embeddings, p_embeddings)
-print("Cosine-Similarity scores:", cos_sim)
+print("Cosine-Similarity scores:", scores)
 
 # COMMAND ----------
 
