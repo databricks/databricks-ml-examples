@@ -14,6 +14,32 @@
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## Wrapping a serving endpoint
+# MAGIC The LangChain Databricks integration could wrap a serving endpoint.
+# MAGIC
+# MAGIC It requires a model serving endpoint (see `02_mlflow_logging_inference` for how to create one) to be in the "Ready" state.
+
+# COMMAND ----------
+
+# MAGIC %pip install -q -U langchain
+# MAGIC dbutils.library.restartPython()
+
+# COMMAND ----------
+
+from langchain.llms import Databricks
+
+# This model serving endpoint is created in `02_mlflow_logging_inference`
+llm = Databricks(endpoint_name='models.default.llama2_13b_chat_model')
+
+# COMMAND ----------
+
+result = llm("How to master Python in 3 days?", temperature=0.1, max_new_tokens=200)
+
+displayHTML(result)
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Wrapping a cluster driver proxy app
 # MAGIC The LangChain Databricks integration also works when given the port that runs a proxy.
 # MAGIC
