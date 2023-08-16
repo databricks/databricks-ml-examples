@@ -144,7 +144,7 @@ with mlflow.start_run() as run:
         "model",
         python_model=Llama2(),
         artifacts={'repository' : snapshot_location},
-        pip_requirements=["torch", "transformers", "accelerate"],
+        pip_requirements=["torch", "transformers", "accelerate", "sentencepiece"],
         input_example=input_example,
         signature=signature,
     )
