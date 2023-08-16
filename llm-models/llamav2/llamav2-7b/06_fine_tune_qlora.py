@@ -34,6 +34,10 @@ notebook_login()
 
 # COMMAND ----------
 
+dbutils.library.restartPython()
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Dataset
 # MAGIC
@@ -252,6 +256,7 @@ for name, module in trainer.model.named_modules():
 # MAGIC Now let's train the model! Simply call `trainer.train()`
 
 # COMMAND ----------
+
 
 trainer.train()
 

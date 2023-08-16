@@ -16,8 +16,11 @@
 
 # COMMAND ----------
 
-from huggingface_hub import notebook_login
+dbutils.library.restartPython()
 
+# COMMAND ----------
+
+from huggingface_hub import notebook_login
 # Login to Huggingface to get access to the model
 notebook_login()
 
