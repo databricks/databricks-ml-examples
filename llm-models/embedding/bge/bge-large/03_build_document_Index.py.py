@@ -113,8 +113,9 @@ metadata_inputs = text_df.to_dict(orient='records')
 vector_store = FAISS.from_texts(
   embedding=model, 
   texts=text_inputs, 
-  metadatas=metadata_inputs
-  )
+  metadatas=metadata_inputs,
+  distance_strategy="COSINE",
+)
 
 # COMMAND ----------
 

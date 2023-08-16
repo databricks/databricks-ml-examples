@@ -144,7 +144,7 @@ with mlflow.start_run() as run:
         "model",
         python_model=Llama2(),
         artifacts={'repository' : snapshot_location},
-        pip_requirements=["torch", "transformers", "accelerate"],
+        pip_requirements=["torch", "transformers", "accelerate", "sentencepiece"],
         input_example=input_example,
         signature=signature,
     )
@@ -169,7 +169,7 @@ mlflow.set_registry_uri("databricks-uc")
 # Register model to Unity Catalog
 # This may take 2.2 minutes to complete
 
-registered_name = "models.default.llamav2_7b_chat_model" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
+registered_name = "models.default.llamav2_7b_chat_model_test" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
 
 
 result = mlflow.register_model(
@@ -183,7 +183,7 @@ from mlflow import MlflowClient
 client = MlflowClient()
 
 # Choose the right model version registered in the above cell.
-client.set_registered_model_alias(name=registered_name, alias="Champion", version=1)
+client.set_registered_model_alias(name=registered_name, alias="Champion", version=2)
 
 # COMMAND ----------
 
