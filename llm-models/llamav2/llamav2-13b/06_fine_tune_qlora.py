@@ -37,6 +37,7 @@ dbutils.library.restartPython()
 # MAGIC We will use the [databricks-dolly-15k ](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
 
 # COMMAND ----------
+
 from huggingface_hub import notebook_login
 # Login to Huggingface to get access to the model
 notebook_login()
@@ -124,8 +125,8 @@ dataset["text"][0]
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoTokenizer
 
-model = "meta-llama/Llama-2-13b-chat-hf"
-revision = "4021a3b5608262f386b2bee683b6348e9228325d"
+model = "meta-llama/Llama-2-13b-hf"
+revision = "a5a274e267651cf851f59ed47a4eab85640cdcc9"
 
 tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
@@ -184,11 +185,11 @@ output_dir = "/local_disk0/results"
 per_device_train_batch_size = 4
 gradient_accumulation_steps = 4
 optim = "paged_adamw_32bit"
-save_steps = 5
+save_steps = 500
 logging_steps = 10
 learning_rate = 2e-4
 max_grad_norm = 0.3
-max_steps = 5
+max_steps = 1500
 warmup_ratio = 0.03
 lr_scheduler_type = "constant"
 
@@ -299,7 +300,7 @@ class LLAMAQLORA(mlflow.pyfunc.PythonModel):
   def predict(self, context, model_input):
     prompt = model_input["prompt"][0]
     temperature = model_input.get("temperature", [1.0])[0]
-    max_tokens = model_input.get("max_tokens", [100])[0]
+    max_tokens = model_input.get("max_tokens", [512])[0]
     batch = self.tokenizer(prompt, padding=True, truncation=True,return_tensors='pt').to('cuda')
     with torch.cuda.amp.autocast():
       output_tokens = self.model.generate(
@@ -334,7 +335,7 @@ signature = ModelSignature(inputs=input_schema, outputs=output_schema)
 input_example=pd.DataFrame({
   "prompt":["what is ML?"], 
   "temperature": [0.5],
-  "max_tokens": [100],
+  "max_tokens": [512],
 })
 
 with mlflow.start_run() as run:  
@@ -343,7 +344,7 @@ with mlflow.start_run() as run:
     python_model=LLAMAQLORA(),
     artifacts={'repository' : snapshot_location, "lora": peft_model_id},
     pip_requirements=["torch", "transformers", "accelerate", "einops", "loralib", "bitsandbytes", "peft"],
-    input_example=pd.DataFrame({"prompt":["what is ML?"], "temperature": [0.5],"max_tokens": [100]}),
+    input_example=pd.DataFrame({"prompt":["what is ML?"], "temperature": [0.5],"max_tokens": [512]}),
     signature=signature
   )
 
@@ -372,7 +373,7 @@ loaded_model = mlflow.pyfunc.load_model(logged_model)
 text_example=pd.DataFrame({
   "prompt":[prompt], 
   "temperature": [0.5],
-  "max_tokens": [100],
+  "max_tokens": [512],
 })
 
 # Predict on a Pandas DataFrame.
