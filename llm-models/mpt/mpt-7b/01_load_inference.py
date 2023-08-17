@@ -133,7 +133,7 @@ def get_num_tokens(text):
 
 print('number of tokens for input:', get_num_tokens(long_input))
 
-results = generate_text([long_input], max_new_tokens=200, use_template=True)
+results = generate_text([long_input], max_new_tokens=200)
 print(results[0])
 
 # COMMAND ----------
@@ -146,8 +146,9 @@ print(results[0])
 
 import time
 import logging
+import re
 
-def get_gen_text_throughput(prompt, use_template=True, **kwargs):
+def get_gen_text_throughput(prompt, **kwargs):
   if "max_new_tokens" not in kwargs:
     kwargs["max_new_tokens"] = 512
   
@@ -155,6 +156,7 @@ def get_gen_text_throughput(prompt, use_template=True, **kwargs):
         {
             "pad_token_id": tokenizer.eos_token_id,
             "eos_token_id": tokenizer.eos_token_id,
+            "return_tensors": True,  # make the pipeline return token ids instead of decoded text to get the number of generated tokens
         }
     )
   
@@ -169,13 +171,14 @@ def get_gen_text_throughput(prompt, use_template=True, **kwargs):
   n_tokens = len(generated_text[0]["generated_token_ids"])
   
   # show the generated text
-  generated_text = generated_text[0]["generated_text"]
+  generated_text = tokenizer.decode(generated_text[0]["generated_token_ids"],
+                                    skip_special_tokens=True)
 
   return (n_tokens / duration, n_tokens, generated_text)
 
 # COMMAND ----------
 
-throughput, n_tokens, result = get_gen_text_throughput("What is ML?", max_new_tokens=200, use_template=True)
+throughput, n_tokens, result = get_gen_text_throughput("What is ML?", max_new_tokens=200)
 
 print(f"{throughput} tokens/sec, {n_tokens} tokens (including full prompt)")
 print(result)
