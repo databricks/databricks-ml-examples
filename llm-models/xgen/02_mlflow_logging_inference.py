@@ -161,6 +161,8 @@ loaded_model.predict(
 # MAGIC ## Create Model Serving Endpoint
 # MAGIC
 # MAGIC Once the model is registered, we can use API to create a Databricks GPU Model Serving Endpoint that serves the XGen-7B-8K-Base model.
+# MAGIC
+# MAGIC Note that the below deployment requires GPU model serving. For more information on GPU model serving, contact the Databricks team or sign up [here](https://docs.google.com/forms/d/1-GWIlfjlIaclqDz6BPODI2j1Xg4f4WbFvBXyebBpN-Y/edit).
 
 # COMMAND ----------
 
