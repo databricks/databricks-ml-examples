@@ -188,7 +188,7 @@ from mlflow import MlflowClient
 client = MlflowClient()
 
 # Choose the right model version registered in the above cell.
-client.set_registered_model_alias(name=registered_name, alias="Champion", version=1)
+client.set_registered_model_alias(name=registered_name, alias="Champion", version=result.version)
 
 # COMMAND ----------
 
