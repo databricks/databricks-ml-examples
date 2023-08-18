@@ -39,7 +39,7 @@ revision = "0ede8dd71e923db6258295621d817ca8714516d4"
 from huggingface_hub import snapshot_download
 
 # If the model has been downloaded in previous cells, this will not repetitively download large model files, but only the remaining files in the repo
-snapshot_location = snapshot_download(repo_id=model, revision=revision)
+snapshot_location = snapshot_download(repo_id=model, revision=revision, ignore_patterns="*.safetensors*")
 
 # COMMAND ----------
 
@@ -183,7 +183,7 @@ from mlflow import MlflowClient
 client = MlflowClient()
 
 # Choose the right model version registered in the above cell.
-client.set_registered_model_alias(name=registered_name, alias="Champion", version=1)
+client.set_registered_model_alias(name=registered_name, alias="Champion", version=result.version)
 
 # COMMAND ----------
 
