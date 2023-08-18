@@ -173,7 +173,7 @@ result = mlflow.register_model(
 # Mark model for deployment using an alias
 from mlflow import MlflowClient
 client = MlflowClient()
-client.set_registered_model_alias(registered_name, "Champion", 1)
+client.set_registered_model_alias(registered_name, "Champion", result.version)
 
 # COMMAND ----------
 
@@ -201,6 +201,8 @@ loaded_model.predict(
 # MAGIC %md
 # MAGIC ## Create Model Serving Endpoint
 # MAGIC Once the model is registered, we can use API to create a Databricks GPU Model Serving Endpoint that serves the Falcon-7B-Instruct model.
+# MAGIC
+# MAGIC Note that the below deployment requires GPU model serving. For more information on GPU model serving, contact the Databricks team or sign up [here](https://docs.google.com/forms/d/1-GWIlfjlIaclqDz6BPODI2j1Xg4f4WbFvBXyebBpN-Y/edit).
 
 # COMMAND ----------
 

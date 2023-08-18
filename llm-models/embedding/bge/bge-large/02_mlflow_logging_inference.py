@@ -76,7 +76,7 @@ from mlflow import MlflowClient
 client = MlflowClient()
 
 # Choose the right model version registered in the above cell.
-client.set_registered_model_alias(name=registered_name, alias="Champion", version=1)
+client.set_registered_model_alias(name=registered_name, alias="Champion", version=result.version)
 
 # COMMAND ----------
 
@@ -101,6 +101,7 @@ loaded_model.predict(
 # MAGIC ## Create Model Serving Endpoint
 # MAGIC Once the model is registered, we can use API to create a Databricks GPU Model Serving Endpoint that serves the `bge-large-en` model.
 # MAGIC
+# MAGIC Note that the below deployment requires GPU model serving. For more information on GPU model serving, contact the Databricks team or sign up [here](https://docs.google.com/forms/d/1-GWIlfjlIaclqDz6BPODI2j1Xg4f4WbFvBXyebBpN-Y/edit).
 
 # COMMAND ----------
 
