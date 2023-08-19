@@ -8,7 +8,7 @@
 # MAGIC
 # MAGIC We recommend running this notebook using A100 GPUs. Environment for this notebook:
 # MAGIC - Runtime: 13.2 GPU ML Runtime
-# MAGIC - Instance: `a2-highgpu-1g` on GCP
+# MAGIC - Instance: `a2-highgpu-1g` on GCP, `Standard_NC24ads_A100_v4` on Azure
 # MAGIC
 # MAGIC We will leverage PEFT library from Hugging Face ecosystem, as well as QLoRA for more memory efficient finetuning.
 

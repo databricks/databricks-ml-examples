@@ -9,7 +9,9 @@
 # MAGIC
 # MAGIC Environment tested:
 # MAGIC - MLR: 13.2 ML
-# MAGIC - Instance: `i3.xlarge` on AWS for wrapping serving endpoint, `g5.4xlarge` on AWS for wrapping a cluster driver proxy app (same instance as the driver proxy app)
+# MAGIC - Instance:
+# MAGIC   - Wrapping a serving endpoint: `i3.xlarge` on AWS, `Standard_DS3_v2` on Azure
+# MAGIC   - Wrapping a cluster driver proxy app: `g5.12xlarge` on AWS, `Standard_NC24ads_A100_v4` on Azure (same instance as the driver proxy app)
 
 # COMMAND ----------
 

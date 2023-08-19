@@ -9,9 +9,9 @@
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.2 GPU ML Runtime
-# MAGIC - Instance: `Standard_NC96ads_A100_v4` on Azure with 4 A100 GPUs.
+# MAGIC - Instance: `Standard_NC96ads_A100_v4` on Azure with 4 A100-80GB GPUs
 # MAGIC
-# MAGIC requirements:
+# MAGIC Requirements:
 # MAGIC - To get the access of the model on HuggingFace, please visit the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads) and accept our license terms and acceptable use policy before submitting this form. Requests will be processed in 1-2 days.
 # MAGIC
 
@@ -48,7 +48,7 @@ notebook_login()
 # COMMAND ----------
 
 # MAGIC %sh
-# MAGIC deepspeed --num_gpus=4 scripts/fine_tune_deepspeed.py
+# MAGIC deepspeed scripts/fine_tune_deepspeed.py
 
 # COMMAND ----------
 
