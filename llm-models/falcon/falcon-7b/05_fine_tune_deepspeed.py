@@ -6,9 +6,7 @@
 # MAGIC
 # MAGIC Environment tested for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
-# MAGIC - Instance: `g5.12xlarge` (4 A10 GPUs) on AWS
-# MAGIC
-# MAGIC On Azure, we suggest using `Standard_NC48ads_A100_v4` on Azure (2 A100-80GB GPUs).
+# MAGIC - Instance: `g5.12xlarge` (4 A10 GPUs) on AWS, `Standard_NC48ads_A100_v4` (2 A100-80GB GPUs) on Azure
 
 # COMMAND ----------
 

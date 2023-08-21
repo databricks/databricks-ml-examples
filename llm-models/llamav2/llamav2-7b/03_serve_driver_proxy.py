@@ -7,11 +7,9 @@
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.2 GPU ML Runtime
-# MAGIC - Instance: `g5.4xlarge` on AWS
+# MAGIC - Instance: `g5.4xlarge` on AWS, `Standard_NV36ads_A10_v5` on Azure
 # MAGIC
-# MAGIC GPU instances that have at least 16GB GPU memory would be enough for inference on single input. On Azure, it is possible to use `Standard_NC6s_v3` or `Standard_NC4as_T4_v3`.
-# MAGIC
-# MAGIC requirements:
+# MAGIC Requirements:
 # MAGIC - To get the access of the model on HuggingFace, please visit the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads) and accept our license terms and acceptable use policy before submitting this form. Requests will be processed in 1-2 days.
 
 # COMMAND ----------

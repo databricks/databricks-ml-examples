@@ -7,7 +7,7 @@
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
-# MAGIC - Instance: `g5.24xlarge` on AWS with 4 A10 GPUs.
+# MAGIC - Instance: `g5.24xlarge` (4 A10 GPUs) on AWS, `Standard_NC24ads_A100_v4` (1 A100-80 GPU) on Azure
 # MAGIC
 
 # COMMAND ----------
@@ -53,7 +53,7 @@ dbutils.library.restartPython()
 # COMMAND ----------
 
 # MAGIC %sh
-# MAGIC deepspeed --num_gpus=4 scripts/fine_tune_deepspeed.py --per-device-train-batch-size=1 --per-device-eval-batch-size=1 --epochs=1 --max-steps=-1 --no-gradient-checkpointing --dbfs-output-dir /dbfs/mpt-7b/
+# MAGIC deepspeed scripts/fine_tune_deepspeed.py --per-device-train-batch-size=1 --per-device-eval-batch-size=1 --epochs=1 --max-steps=-1 --no-gradient-checkpointing --dbfs-output-dir /dbfs/mpt-7b/
 
 # COMMAND ----------
 

@@ -8,9 +8,9 @@
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.2 GPU ML Runtime
-# MAGIC - Instance: `g5.8xlarge` on AWS
+# MAGIC - Instance: `g5.8xlarge` on AWS, `Standard_NV36ads_A10_v5` on Azure
 # MAGIC
-# MAGIC We will leverage PEFT library from Hugging Face ecosystem, as well as QLoRA for more memory efficient finetuning
+# MAGIC We leverage the PEFT library from Hugging Face, as well as QLoRA for more memory efficient finetuning.
 
 # COMMAND ----------
 

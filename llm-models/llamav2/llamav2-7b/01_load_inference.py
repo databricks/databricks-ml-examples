@@ -6,12 +6,10 @@
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.2 GPU ML Runtime
-# MAGIC - Instance: `g5.4xlarge` on AWS
+# MAGIC - Instance: `g5.4xlarge` on AWS, `Standard_NV36ads_A10_v5` on Azure
 # MAGIC
-# MAGIC GPU instances that have at least 16GB GPU memory would be enough for inference on single input (batch inference requires slightly more memory). On Azure, it is possible to use `Standard_NC6s_v3` or `Standard_NC4as_T4_v3`.
-# MAGIC
-# MAGIC requirements:
-# MAGIC - To get the access of the model on HuggingFace, please visit the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads) and accept our license terms and acceptable use policy before submitting this form. Requests will be processed in 1-2 days.
+# MAGIC Requirements:
+# MAGIC - To get the access of the model on HuggingFace, please visit the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads) and accept the license terms and acceptable use policy before submitting this form. Requests will be processed in 1-2 days.
 
 # COMMAND ----------
 
@@ -140,7 +138,7 @@ def get_num_tokens(text):
 
 print('number of tokens for input:', get_num_tokens(long_input))
 
-results = gen_text([long_input], max_new_tokens=150, use_template=False)
+results = gen_text([long_input], max_new_tokens=150, use_template=True)
 print(results[0])
 
 # COMMAND ----------
