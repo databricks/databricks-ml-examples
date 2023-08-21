@@ -112,7 +112,8 @@ class Llama2(mlflow.pyfunc.PythonModel):
 
           outputs.append(self._generate_response(prompt, temperature, max_new_tokens))
       
-        return outputs
+        # {"candidates": [...]} is the required response format for MLflow AI gateway -- see 07_ai_gateway for example
+        return {"candidates": outputs}
 
 # COMMAND ----------
 
