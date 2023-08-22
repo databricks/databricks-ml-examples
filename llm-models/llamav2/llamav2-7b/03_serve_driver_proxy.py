@@ -109,7 +109,7 @@ from flask import Flask, jsonify, request
 app = Flask("llama-2-7b-chat")
 
 @app.route('/', methods=['POST'])
-def serve_falcon_7b_instruct():
+def serve_llama2_7b_instruct():
   resp = gen_text_for_serving(**request.json)
   return jsonify(resp)
 
