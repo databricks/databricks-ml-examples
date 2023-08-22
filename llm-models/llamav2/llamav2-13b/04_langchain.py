@@ -82,15 +82,24 @@ print(llm("How to master Python in 3 days?"))
 
 
 def transform_input(**request):
-    full_prompt = f"""{request["prompt"]}
-    Be Concise.
+    """
+    Add more instructions into the prompt.
+    """
+    full_prompt = f"""[INST] Let's think step by step. [/INST]
+    User: {request["prompt"]}
     """
     request["prompt"] = full_prompt
     return request
 
 
 def transform_output(response):
-    return response.upper()
+    """
+    Add timestamps for the anwsers.
+    """
+    from datetime import datetime
+    now = datetime.now()
+    current_time = now.strftime("%d/%m/%Y %H:%M:%S")
+    return f"[{current_time}] llama2: {response}"
 
 
 llm = Databricks(
