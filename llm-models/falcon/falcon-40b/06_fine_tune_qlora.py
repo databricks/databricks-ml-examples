@@ -279,14 +279,22 @@ trainer.save_model("/dbfs/falcon-40b-fine-tune")
 
 import torch
 from peft import PeftModel, PeftConfig
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 peft_model_id = "/dbfs/falcon-40b-fine-tune"
 config = PeftConfig.from_pretrained(peft_model_id)
+
+bnb_config = BitsAndBytesConfig(
+  load_in_4bit=True,
+  bnb_4bit_use_double_quant=True,
+  bnb_4bit_quant_type="nf4",
+  bnb_4bit_compute_dtype=torch.bfloat16,
+)
+
 model = AutoModelForCausalLM.from_pretrained(
     config.base_model_name_or_path, 
-    return_dict=True, 
-    load_in_8bit=True, 
+    return_dict=True,
+    quantization_config=bnb_config,
     device_map={"":0},
     trust_remote_code=True,
 )
@@ -298,7 +306,7 @@ model = PeftModel.from_pretrained(model, peft_model_id)
 
 # COMMAND ----------
 
-def generate_text(prompt, temperature=0.1, max_tokens=250):
+def generate_text(prompt, temperature=0.1, max_tokens=100):
     batch = tokenizer(prompt, padding=True, truncation=True,return_tensors='pt').to('cuda')
     with torch.cuda.amp.autocast():
       output_tokens = model.generate(
@@ -315,8 +323,9 @@ def generate_text(prompt, temperature=0.1, max_tokens=250):
     return generated_text
 
 prompt = """Below is an instruction that describes a task. Write a response that appropriately completes the request.
+
 ### Instruction:
-if one get corona and you are self isolating and it is not severe, is there any meds that one can take?
+Recommend some places for hiking around San Francisco, and explain why.
 
 ### Response: """
 
