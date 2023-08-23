@@ -16,3 +16,12 @@ Databricks works with thousands of customers to build generative AI applications
 | Transcription (speech to text) | | [whisper-large-v2 (1.6B)](https://huggingface.co/openai/whisper-large-v2) <br> [whisper-medium](https://huggingface.co/openai/whisper-medium) (0.8B, English only) | |
 | Image generation | | [stable-diffusion-2-1](https://huggingface.co/stabilityai/stable-diffusion-2-1) | |
 | Code generation  | | [StarCoderBase ](https://huggingface.co/bigcode/starcoderbase) (16B) <br> [StarCoder](https://huggingface.co/bigcode/starcoder) (16B, Python optimized) | [replit-code-v1-3b](https://huggingface.co/replit/replit-code-v1-3b) |
+
+
+## Other examples:
+
+- [DIY LLM QA Bot Accelerator](https://github.com/databricks-industry-solutions/diy-llm-qa-bot)
+- [Biomedical Question Answering over Custom Datasets with LangChain and Llama 2 from Hugging Face](https://github.com/databricks-industry-solutions/hls-llm-doc-qa)
+- [DIY QA LLM BOT](https://github.com/puneet-jain159/DSS_LLM_QA_Retrieval_Session/tree/main)
+- [Tuning the Finetuning: An exploration of achieving success with QLoRA](https://github.com/avisoori-databricks/Tuning-the-Finetuning)
+- [databricks-llm-fine-tuning](https://github.com/mshtelma/databricks-llm-fine-tuning)
