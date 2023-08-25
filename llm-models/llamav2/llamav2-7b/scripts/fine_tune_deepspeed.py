@@ -1,4 +1,5 @@
 import click
+from dataclasses import field, dataclass
 from functools import partial
 import json
 import logging
@@ -6,6 +7,7 @@ import os
 import numpy as np
 from pathlib import Path
 import torch
+from typing import Optional, Union
 
 from datasets import Dataset, load_dataset
 import transformers
@@ -14,15 +16,14 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     DataCollatorForLanguageModeling,
+    HfArgumentParser,
+    IntervalStrategy,
     PreTrainedTokenizer,
+    SchedulerType,
     Trainer,
     TrainingArguments,
     set_seed,
 )
-
-
-os.environ['HF_HOME'] = '/local_disk0/hf'
-os.environ['TRANSFORMERS_CACHE'] = '/local_disk0/hf'
 
 logger = logging.getLogger(__name__)
 
@@ -64,15 +65,60 @@ ROOT_PATH = Path(__file__).parent.parent
 MODEL_PATH = 'meta-llama/Llama-2-7b-hf'
 TOKENIZER_PATH = 'meta-llama/Llama-2-7b-hf'
 DEFAULT_TRAINING_DATASET = "databricks/databricks-dolly-15k"
-CONFIG_PATH = "../../config/a100_config.json"
+CONFIG_PATH = "../../config/a10_config.json"
 LOCAL_OUTPUT_DIR = "/dbfs/llama-2-fine-tune/output"
 DEFAULT_SEED = 68
+
+
+@dataclass
+class HFTrainingArguments:
+  local_rank: Optional[str] = field(default="-1")
+  dataset: Optional[str] = field(default=DEFAULT_TRAINING_DATASET)
+  model: Optional[str] = field(default=MODEL_PATH)
+  tokenizer: Optional[str] = field(default=TOKENIZER_PATH)
+  config_path: Optional[str] = field(default=CONFIG_PATH)
+  max_seq_len: Optional[int] = field(default=256)
+
+  final_model_output_path: Optional[str] = field(default="/local_disk0/final_model")
+  deepspeed_config: Optional[str] = field(default=CONFIG_PATH)
+
+  output_dir: Optional[str] = field(default="/local_disk0/final_model")
+  per_device_train_batch_size: Optional[int] = field(default=1)
+  per_device_eval_batch_size: Optional[int] = field(default=1)
+  gradient_checkpointing: Optional[bool] = field(default=True)
+  gradient_accumulation_steps: Optional[int] = field(default=1)
+  learning_rate: Optional[float] = field(default=3e-4)
+  optim: Optional[str] = field(default="adamw_hf")
+  num_train_epochs: Optional[int] = field(default=3)
+  max_steps: Optional[int] = field(default=-1)
+  adam_beta1: float = field(default=0.9)
+  adam_beta2: float = field(default=0.95)
+  adam_epsilon: float = field(default=1e-4)
+  lr_scheduler_type: Union[SchedulerType, str] = field(
+      default="cosine",
+  )
+  warmup_steps: int = field(default=5)
+  weight_decay: Optional[float] = field(default=0.1)
+  logging_strategy: Optional[Union[str, IntervalStrategy]] = field(
+      default=IntervalStrategy.STEPS
+  )
+  evaluation_strategy: Optional[Union[str, IntervalStrategy]] = field(
+      default=IntervalStrategy.STEPS
+  )
+  save_strategy: Optional[Union[str, IntervalStrategy]] = field(
+      default=IntervalStrategy.STEPS
+  )
+  fp16: Optional[bool] = field(default=False)
+  bf16: Optional[bool] = field(default=True)
+  save_steps: Optional[int] = field(default=100)
+  logging_steps: Optional[int] = field(default=10)
 
 
 def load_training_dataset(
   tokenizer,
   path_or_dataset: str = DEFAULT_TRAINING_DATASET,
-  seed: int = DEFAULT_SEED
+  max_seq_len: int = 256,
+  seed: int = DEFAULT_SEED,
   ) -> Dataset:
     logger.info(f"Loading dataset from {path_or_dataset}")
     dataset = load_dataset(path_or_dataset)["train"]
@@ -87,14 +133,20 @@ def load_training_dataset(
         questions = PROMPT_WITH_INPUT_FORMAT.format(instruction=instruction, input=context)
       else:
         questions = PROMPT_NO_INPUT_FORMAT.format(instruction=instruction)
-      return {"text": f"{{ 'prompt': {questions}, 'response': {response} }}"}
-    
-    dataset = dataset.map(_reformat_data)
+      return {"text": f"{questions}\n {response}"} 
 
-    def tokenize_function(allEntries):
-      return tokenizer(allEntries['text'], truncation=True, max_length=512,)
+    def tokenize_function(element):
+      outputs = tokenizer(
+        _reformat_data(element)["text"], 
+        truncation=True,
+        padding=True,
+        max_length=max_seq_len,
+        return_overflowing_tokens=False,
+        )
+      return outputs
     
     dataset = dataset.map(tokenize_function)
+  
     split_dataset = dataset.train_test_split(test_size=1000, seed=seed)
     train_tokenized_dataset = split_dataset['train']
     eval_tokenized_dataset = split_dataset['test']
@@ -110,12 +162,12 @@ def load_model(
     model = transformers.AutoModelForCausalLM.from_pretrained(
       pretrained_model_name_or_path,
       torch_dtype=torch.bfloat16,
+      device_map=None,
+      low_cpu_mem_usage=True,
       trust_remote_code=True
     )
-    config = AutoConfig.from_pretrained(pretrained_model_name_or_path)
-    model_hidden_size = config.hidden_size
 
-    return model, model_hidden_size
+    return model
 
 def get_tokenizer(
     pretrained_tokenizer_name_or_path: str = TOKENIZER_PATH,
@@ -124,71 +176,47 @@ def get_tokenizer(
     tokenizer.pad_token = tokenizer.eos_token
     return tokenizer
 
-with open(CONFIG_PATH) as config_json:
-  ds_config_dict = json.load(config_json)
+def train(args: HFTrainingArguments):
+  set_seed(DEFAULT_SEED)
+  torch.backends.cuda.matmul.allow_tf32 = True
 
-def train(
-  *,
-  input_model: str,
-  local_output_dir: str,
-  dbfs_output_dir: str,
-  epochs: int,
-  per_device_train_batch_size: int,
-  per_device_eval_batch_size: int,
-  lr: float,
-  seed: int,
-  gradient_checkpointing: bool,
-  local_rank: str,
-  bf16: bool,
-  logging_steps: int,
-  save_steps: int,
-  eval_steps: int,
-  save_total_limit: int,
-  warmup_steps: int,
-  training_dataset: str = DEFAULT_TRAINING_DATASET,
-):
-  set_seed(seed)
-  os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:128"
-  # Enable tf32 for better performance
-  # torch.backends.cuda.matmul.allow_tf32 = True
+  tokenizer = get_tokenizer(args.tokenizer)
+  train_dataset, val_dataset = load_training_dataset(tokenizer, max_seq_len=256, seed=DEFAULT_SEED)
+  model = load_model(pretrained_model_name_or_path=args.model)
 
-  model, model_hidden_size = load_model(pretrained_model_name_or_path=input_model)
-  tokenizer = get_tokenizer()
-  train_dataset, val_dataset = load_training_dataset(tokenizer, seed=seed)
-  ds_config_dict["hidden_size"] = model_hidden_size
-  ds_config_dict["zero_optimization"]["reduce_bucket_size"] = model_hidden_size*model_hidden_size
-  ds_config_dict["zero_optimization"]["stage3_prefetch_bucket_size"] = 0.9 * model_hidden_size * model_hidden_size
-  ds_config_dict["zero_optimization"]["stage3_param_persistence_threshold"] = 10 * model_hidden_size
-
-  # enable fp16 if not bf16
-  fp16 = not bf16
+  with open(args.config_path) as config_json:
+    ds_config_dict = json.load(config_json)
 
   training_args = TrainingArguments(
-    output_dir=local_output_dir,
-    per_device_train_batch_size=per_device_train_batch_size,
-    per_device_eval_batch_size=per_device_eval_batch_size,
-    learning_rate=lr,
-    num_train_epochs=epochs,
-    weight_decay=1,
-    do_eval=True,
-    evaluation_strategy="steps",
-    eval_steps=eval_steps,
-    fp16=fp16,
-    bf16=bf16,
+    local_rank=args.local_rank,
+    output_dir=args.output_dir,
+    per_device_train_batch_size=args.per_device_train_batch_size,
+    per_device_eval_batch_size=args.per_device_eval_batch_size,
+    learning_rate=args.learning_rate,
+    optim=args.optim,
+    num_train_epochs=args.num_train_epochs,
+    max_steps=args.max_steps,
+    adam_beta1=args.adam_beta1,
+    adam_beta2=args.adam_beta2,
+    adam_epsilon=args.adam_epsilon,
+    lr_scheduler_type=args.lr_scheduler_type,
+    warmup_steps=args.warmup_steps,
+    weight_decay=args.weight_decay,
+    logging_strategy=args.logging_strategy,
+    evaluation_strategy=args.evaluation_strategy,
+    save_strategy=args.save_strategy,
+    fp16=args.fp16,
+    bf16=args.bf16,
     deepspeed=ds_config_dict,
-    logging_strategy="steps",
-    logging_steps=logging_steps,
-    save_strategy="steps",
-    save_steps=save_steps,
-    save_total_limit=save_total_limit,
-    local_rank=local_rank,
-    warmup_steps=warmup_steps,
+    logging_steps=args.logging_steps,
+    save_steps=args.save_steps,
+    save_total_limit=5,
+    push_to_hub=False,
+    disable_tqdm=True,
     report_to=[],
   )
   
-  data_collator = DataCollatorForLanguageModeling(
-    tokenizer=tokenizer, mlm=False
-  )
+  data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
   trainer = Trainer(
     model=model,
@@ -213,38 +241,19 @@ def train(
   logger.info("Training finished.")
 
 
-@click.command()
-@click.option("--input-model", type=str, help="Input model to fine tune", default=MODEL_PATH)
-@click.option("--local-output-dir", type=str, help="Write directly to this local path", default=LOCAL_OUTPUT_DIR)
-@click.option("--dbfs-output-dir", type=str, help="Sync data to this path on DBFS")
-@click.option("--epochs", type=int, default=3, help="Number of epochs to train for.")
-@click.option("--per-device-train-batch-size", type=int, default=5, help="Batch size to use for training.")
-@click.option("--per-device-eval-batch-size", type=int, default=5, help="Batch size to use for evaluation.")
-@click.option("--warmup-steps", type=int, default=20, help="Number of steps to warm up to learning rate")
-@click.option("--logging-steps", type=int, default=10, help="How often to log")
-@click.option("--eval-steps", type=int, default=50, help="How often to run evaluation on test records")
-@click.option("--save-steps", type=int, default=400, help="How often to checkpoint the model")
-@click.option("--save-total-limit", type=int, default=10, help="Maximum number of checkpoints to keep on disk")
-@click.option("--lr", type=float, default=1e-5, help="Learning rate to use for training.")
-@click.option("--seed", type=int, default=DEFAULT_SEED, help="Seed to use for training.")
-@click.option("--training-dataset", type=str, default=DEFAULT_TRAINING_DATASET, help="Path to dataset for training")
-@click.option(
-    "--gradient-checkpointing/--no-gradient-checkpointing",
-    is_flag=True,
-    default=True,
-    help="Use gradient checkpointing?",
-)
-@click.option(
-    "--local_rank",
-    type=str,
-    default=True,
-    help="Provided by deepspeed to identify which instance this process is when performing multi-GPU training.",
-)
-@click.option("--bf16", type=bool, default=True, help="Whether to use bf16 (preferred on A100's).")
 def main(**kwargs):
-    train(**kwargs)
+  parser = HfArgumentParser(HFTrainingArguments)
+  parsed = parser.parse_args_into_dataclasses()
+  args = parsed[0]
+
+
+  train(args)
 
 if __name__ == "__main__":
+  os.environ['HF_HOME'] = '/local_disk0/hf'
+  os.environ["HF_DATASETS_CACHE"] = "/local_disk0/hf"
+  os.environ['TRANSFORMERS_CACHE'] = '/local_disk0/hf'
+
   logging.basicConfig(
     format="%(asctime)s %(levelname)s [%(name)s] %(message)s", level=logging.INFO, datefmt="%Y-%m-%d %H:%M:%S"
   )

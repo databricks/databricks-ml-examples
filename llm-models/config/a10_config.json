@@ -34,6 +34,10 @@
       "stage3_prefetch_bucket_size" : 5e8,
       "stage3_param_persistence_threshold" : 1e6,
       "stage3_gather_16bit_weights_on_model_save": true,
+      "offload_param": {
+      "device": "cpu",
+      "pin_memory": true
+      },
       "offload_optimizer": {
         "device": "cpu",
         "pin_memory": true
@@ -41,7 +45,7 @@
     },
     "gradient_accumulation_steps": "auto",
     "gradient_clipping": "auto",
-    "steps_per_print": 2000,
+    "steps_per_print": 50,
     "train_batch_size": "auto",
     "train_micro_batch_size_per_gpu": "auto",
     "wall_clock_breakdown": false

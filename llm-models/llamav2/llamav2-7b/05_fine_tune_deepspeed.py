@@ -22,12 +22,9 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install -U torch
-# MAGIC %pip install deepspeed xformers
-
-# COMMAND ----------
-
-dbutils.library.restartPython()
+# MAGIC %pip install -U torch==2.0.1
+# MAGIC %pip install deepspeed==0.9.5 xformers
+# MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
 
@@ -48,7 +45,8 @@ notebook_login()
 # COMMAND ----------
 
 # MAGIC %sh
-# MAGIC deepspeed scripts/fine_tune_deepspeed.py
+# MAGIC deepspeed --num_gpus=4 scripts/fine_tune_deepspeed.py --per_device_train_batch_size=2 \
+# MAGIC --per_device_eval_batch_size=2 --num_train_epochs=1 --deepspeed_config="../../config/a10_config.json"
 
 # COMMAND ----------
 
