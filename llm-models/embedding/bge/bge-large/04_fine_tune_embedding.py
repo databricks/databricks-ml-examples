@@ -114,7 +114,7 @@ class SentenceTransformerEmbeddingModel(mlflow.pyfunc.PythonModel):
     self.model = SentenceTransformer(context.artifacts["sentence-transformer-model"], device=device)
     
   def predict(self, context, model_input): 
-    texts = model_input.iloc[:, 0].to_list()  # get the first column
+    texts = model_input.iloc[:,0].to_list() # get the first column
     sentence_embeddings = self.model.encode(texts)
     return pd.Series(sentence_embeddings.tolist())
 
