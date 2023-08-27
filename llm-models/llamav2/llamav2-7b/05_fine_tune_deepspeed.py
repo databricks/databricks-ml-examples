@@ -23,6 +23,7 @@
 # COMMAND ----------
 
 # MAGIC %pip install -U torch==2.0.1
+# MAGIC %pip install accelerate==0.21.0 transformers[torch]==4.31.0
 # MAGIC %pip install deepspeed==0.9.5 xformers
 # MAGIC dbutils.library.restartPython()
 
@@ -35,6 +36,14 @@ notebook_login()
 
 # COMMAND ----------
 
+import os
+
+os.environ["HF_HOME"] = "/local_disk0/hf"
+os.environ["HF_DATASETS_CACHE"] = "/local_disk0/hf"
+os.environ["TRANSFORMERS_CACHE"] = "/local_disk0/hf"
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Fine tune the model with `deepspeed`
 # MAGIC
@@ -44,19 +53,33 @@ notebook_login()
 
 # COMMAND ----------
 
-# MAGIC %sh
-# MAGIC deepspeed --num_gpus=4 scripts/fine_tune_deepspeed.py --per_device_train_batch_size=2 \
-# MAGIC --per_device_eval_batch_size=2 --num_train_epochs=1 --deepspeed_config="../../config/a10_config.json"
+!deepspeed \
+--num_gpus=4 \
+scripts/fine_tune_deepspeed.py \
+--final_model_output_path="/dbfs/llm" \
+--output_dir="/local_disk0/output" \
+--dataset="mosaicml/dolly_hhrlhf" \
+--model="meta-llama/Llama-2-7b-hf" \
+--tokenizer="meta-llama/Llama-2-7b-hf" \
+--deepspeed_config="../../config/a10_config.json" \
+--fp16=false \
+--bf16=true \
+--per_device_train_batch_size=24 \
+--per_device_eval_batch_size=24 \
+--gradient_checkpointing=true \
+--gradient_accumulation_steps=1 \
+--save_steps=500 \
+--num_train_epochs=1
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Model checkpoint is saved at `/dbfs/llama-2-fine-tune/output`.
+# MAGIC Model checkpoint is saved at `/dbfs/llm`.
 
 # COMMAND ----------
 
 # MAGIC %sh
-# MAGIC ls /dbfs/llama-2-fine-tune/output
+# MAGIC ls /dbfs/llm
 
 # COMMAND ----------
 
@@ -154,7 +177,7 @@ with mlflow.start_run() as run:
     mlflow.pyfunc.log_model(
         "model",
         python_model=LlamaV2(),
-        artifacts={'repository' : "/dbfs/lu/output"},
+        artifacts={'repository' : "/dbfs/llm"},
         pip_requirements=[f"torch=={torch.__version__}", 
                           f"transformers=={transformers.__version__}", 
                           f"accelerate=={accelerate.__version__}", "einops", "sentencepiece"],
@@ -261,3 +284,7 @@ type(result)
 
 for i in result:
   print(i)
+
+# COMMAND ----------
+
+
