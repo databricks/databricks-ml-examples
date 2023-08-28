@@ -228,17 +228,17 @@ def get_gen_text_throughput(prompt, use_template=True, **kwargs):
     )
     result = "".join(result)
 
-    return (n_tokens / duration, n_tokens, result)
+    return ((n_tokens - num_input_tokens) / duration, (n_tokens - num_input_tokens), result)
 
 # COMMAND ----------
 
 throughput, n_tokens, result = get_gen_text_throughput("What is ML?", use_template=False)
 
-print(f"{throughput} tokens/sec, {n_tokens} tokens (including full prompt)")
+print(f"{throughput} tokens/sec, {n_tokens} tokens (not including prompt)")
 
 # COMMAND ----------
 
 # When the context is long or the generated text is long, it takes longer to generate each token in average
 throughput, n_tokens, result = get_gen_text_throughput(long_input, max_new_tokens=200, use_template=True)
 
-print(f"{throughput} tokens/sec, {n_tokens} tokens (including full prompt)")
+print(f"{throughput} tokens/sec, {n_tokens} tokens (not including prompt)")

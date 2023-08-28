@@ -165,7 +165,7 @@ def generate_and_measure_throughput(prompt, **kwargs):
   )
   result = "".join(result)
 
-  return (num_output_tokens / duration, num_output_tokens, result)
+  return ((num_output_tokens - num_input_tokens) / duration, (num_output_tokens - num_input_tokens), result)
 
 # COMMAND ----------
 
