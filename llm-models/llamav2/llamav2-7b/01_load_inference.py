@@ -227,7 +227,7 @@ def get_gen_text_throughput(prompt, use_template=True, **kwargs):
     )
     result = "".join(result)
 
-    return (n_tokens / duration, n_tokens, result)
+    return ((n_tokens - num_input_tokens) / duration, n_tokens, result)
 
 # COMMAND ----------
 
