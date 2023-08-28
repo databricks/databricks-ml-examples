@@ -165,6 +165,8 @@ def get_gen_text_throughput(prompt, **kwargs):
   generated_text = generator(full_prompt, **kwargs)
   duration = time.time() - start
   
+  num_input_tokens = get_num_tokens(full_prompt)
+
   # get the number of generated tokens
   n_tokens = len(generated_text[0]["generated_token_ids"])
   
@@ -172,11 +174,11 @@ def get_gen_text_throughput(prompt, **kwargs):
   generated_text = tokenizer.decode(generated_text[0]["generated_token_ids"],
                                     skip_special_tokens=True)
 
-  return (n_tokens / duration, n_tokens, generated_text)
+  return ((n_tokens - num_input_tokens) / duration, (n_tokens - num_input_tokens), generated_text)
 
 # COMMAND ----------
 
 throughput, n_tokens, result = get_gen_text_throughput("What is ML?", max_new_tokens=200)
 
-print(f"{throughput} tokens/sec, {n_tokens} tokens (including full prompt)")
+print(f"{throughput} tokens/sec, {n_tokens} tokens (not including prompt)")
 print(result)
