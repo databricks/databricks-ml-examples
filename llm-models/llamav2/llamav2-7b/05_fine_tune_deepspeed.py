@@ -29,18 +29,18 @@
 
 # COMMAND ----------
 
-from huggingface_hub import notebook_login
-
-# Login to Huggingface to get access to the model
-notebook_login()
-
-# COMMAND ----------
-
 import os
 
 os.environ["HF_HOME"] = "/local_disk0/hf"
 os.environ["HF_DATASETS_CACHE"] = "/local_disk0/hf"
 os.environ["TRANSFORMERS_CACHE"] = "/local_disk0/hf"
+
+# COMMAND ----------
+
+from huggingface_hub import notebook_login
+
+# Login to Huggingface to get access to the model
+notebook_login()
 
 # COMMAND ----------
 
@@ -54,7 +54,6 @@ os.environ["TRANSFORMERS_CACHE"] = "/local_disk0/hf"
 # COMMAND ----------
 
 !deepspeed \
---num_gpus=4 \
 scripts/fine_tune_deepspeed.py \
 --final_model_output_path="/dbfs/llm" \
 --output_dir="/local_disk0/output" \
