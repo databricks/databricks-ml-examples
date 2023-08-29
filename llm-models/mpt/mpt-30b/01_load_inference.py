@@ -6,7 +6,13 @@
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
-# MAGIC - Instance: `Standard_NC24ads_A100_v4` on Azure
+# MAGIC - Instance:
+# MAGIC   - `Standard_NC24ads_A100_v4` (1 A100-80GB GPU) on Azure
+# MAGIC   - `g5.12xlarge` (4 A10 GPUs) on AWS: Note that the triton-based FlashAttention would not work for this model with smaller GPUs such as A10, set `USE_TRITON=False` below
+
+# COMMAND ----------
+
+USE_TRITON = True  # TODO: Please change this to False if not using A100-80GB GPU
 
 # COMMAND ----------
 
@@ -50,8 +56,10 @@ revision = "2abf1163dd8c9b11f07d805c06e6ec90a1f2037e"
 
 config = transformers.AutoConfig.from_pretrained(name, trust_remote_code=True)
 config.max_seq_len = 16384
-config.attn_config['attn_impl'] = 'triton'  # change this to use triton-based FlashAttention
 config.init_device = 'cuda' # For fast initialization directly on GPU!
+
+if USE_TRITON:
+  config.attn_config['attn_impl'] = 'triton'  # change this to use triton-based FlashAttention
 
 model = transformers.AutoModelForCausalLM.from_pretrained(
   name,

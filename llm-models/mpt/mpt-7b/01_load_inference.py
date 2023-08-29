@@ -5,12 +5,16 @@
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
-# MAGIC - Instance: `g5.4xlarge` on AWS, `Standard_NV36ads_A10_v5` on Azure
+# MAGIC - Instance: `g5.4xlarge` on AWS, `Standard_NV36ads_A10_v5` (or `Standard_NC4as_T4_v3` and set `USE_TRITON=False`) on Azure
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## Install required packages
+
+# COMMAND ----------
+
+USE_TRITON = True # TODO: Please change this to False if not using T4 GPUs
 
 # COMMAND ----------
 
@@ -45,8 +49,10 @@ config = transformers.AutoConfig.from_pretrained(
   name,
   trust_remote_code=True
 )
-config.attn_config['attn_impl'] = 'triton'
+
 config.init_device = 'cuda'
+if USE_TRITON:
+  config.attn_config['attn_impl'] = 'triton'
 
 model = transformers.AutoModelForCausalLM.from_pretrained(
   name,
