@@ -114,7 +114,7 @@ class SentenceTransformerEmbeddingModel(mlflow.pyfunc.PythonModel):
     self.model = SentenceTransformer(context.artifacts["sentence-transformer-model"], device=device)
     
   def predict(self, context, model_input): 
-    texts = model_input.iloc[:,0].to_list() # get the first column
+    texts = model_input.iloc[:, 0].to_list()  # get the first column
     sentence_embeddings = self.model.encode(texts)
     return pd.Series(sentence_embeddings.tolist())
 
@@ -143,7 +143,7 @@ with mlflow.start_run() as run:
 # COMMAND ----------
 
 # Register model
-# This may take 2.2 minutes to complete
+# This may take 1 minutes to complete
 
 registered_name = "bge-embedding-model"
 
@@ -184,5 +184,11 @@ test_df = pd.DataFrame(['London has 9,787,426 inhabitants at the 2011 census',
 loaded_model.predict(test_df)
 
 # COMMAND ----------
+# If you need to search the long relevant passages to a short query,
+# you need to add the instruction `Represent this sentence for searching relevant passages:` to the query
+test_df = pd.DataFrame(['London has 9,787,426 inhabitants at the 2011 census',
+                        'London is known for its finacial district'], columns=["text"])
 
-
+# Add the instruction to each entry in the "text" column
+test_df['text'] = 'Represent this sentence for searching relevant passages: ' + test_df['text']
+loaded_model.predict(test_df)
