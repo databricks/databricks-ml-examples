@@ -9,7 +9,7 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install -q faiss-cpu
+# MAGIC %pip install -q faiss-gpu
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -50,12 +50,14 @@
 
 # COMMAND ----------
 
+# Note for user: Fill out the following variables with the mlflow models, datasets, and related information in this cell. 
+
 # The run_id from the AutoML Embeddings experiment
-run_id = ""
+run_id = "TODO: add run ID" # example: "ebd1c0d0614b4e288ea6d30d37e67659"
 # The delta table that you want to be able to query
-delta_table_name = ""
+delta_table_name = "TODO: add table name" # example: "main.default...."
 # The text column within the delta table
-text_column_name = ""
+text_column_name = "TODO: add column name for passages" # example: "text" 
 
 # COMMAND ----------
 
@@ -70,7 +72,7 @@ from langchain.embeddings.base import Embeddings
 from typing import Any, Dict, List, Optional
 
 # Creating a version of Langchain's Embeddings that can support a mlflow experiment's run_id
-class SentenceTransformerFromMlflow(Embeddings):
+class E5TransformerFromMlflow(Embeddings):
     def __init__(self, run_id: str):
         # Gets the latest model trained by AutoML
         latest_model_path = mlflow.MlflowClient().list_artifacts(run_id)[-1].path
@@ -100,7 +102,7 @@ class SentenceTransformerFromMlflow(Embeddings):
 from langchain.vectorstores import FAISS
 from langchain.document_loaders import PySparkDataFrameLoader
 
-fine_tuned_embeddings_model = SentenceTransformerFromMlflow(run_id = run_id)
+fine_tuned_embeddings_model = E5TransformerFromMlflow(run_id = run_id)
 spark_df = spark.table(delta_table_name)
 loader = PySparkDataFrameLoader(spark, spark_df, page_content_column=text_column_name)
 documents = loader.load()
@@ -109,7 +111,9 @@ faiss_vector_store = FAISS.from_documents(documents, embedding=fine_tuned_embedd
 
 # COMMAND ----------
 
-faiss_vector_store.similarity_search("what is the delta engine")[0]
+# Note for user: fill out this section with any query
+
+faiss_vector_store.similarity_search("TODO: Add a query")[0] # Example: "what is databricks"
 
 # COMMAND ----------
 
@@ -121,12 +125,14 @@ faiss_vector_store.similarity_search("what is the delta engine")[0]
 
 from langchain.embeddings import HuggingFaceEmbeddings
 
-sota_embeddings_model = HuggingFaceEmbeddings(model_name="intfloat/e5-base-v2")
-sota_faiss_vector_store = FAISS.from_documents(documents, embedding=sota_embeddings_model)
+external_embeddings_model = HuggingFaceEmbeddings(model_name="intfloat/e5-base-v2")
+external_faiss_vector_store = FAISS.from_documents(documents, embedding=external_embeddings_model)
 
 # COMMAND ----------
 
-sota_faiss_vector_store.similarity_search("query: what is the delta engine")[0]
+# Note for user: fill out this section with any query
+
+external_faiss_vector_store.similarity_search("TODO: Add a query")[0] # Example: "what is databricks"
 
 # COMMAND ----------
 
