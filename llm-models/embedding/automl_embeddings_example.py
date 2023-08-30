@@ -150,4 +150,4 @@ external_faiss_vector_store.similarity_search("TODO: Add a query")[0] # Example:
 
 # model = ChatOpenAI(model_name="gpt-3.5-turbo")
 # qa = ConversationalRetrievalChain.from_llm(model, retriever=faiss_vector_store.as_retriever())
-# print(qa.run({"question": "query: How do I delete a table?", "chat_history": []}))
+# print(qa.run({"question": "TODO: Add a query", "chat_history": []})) # Example: "what is databricks"
