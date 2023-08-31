@@ -53,11 +53,11 @@
 # Note for user: Fill out the following variables with the mlflow models, datasets, and related information in this cell. 
 
 # The run_id from the AutoML Embeddings experiment
-run_id = "TODO: add run ID" # example: "ebd1c0d0614b4e288ea6d30d37e67659"
+run_id = "TODO"
 # The delta table that you want to be able to query
-delta_table_name = "TODO: add table name" # example: "main.default...."
+delta_table_name = "TODO"
 # The text column within the delta table
-text_column_name = "TODO: add column name for passages" # example: "text" 
+text_column_name = "TODO"
 
 # COMMAND ----------
 
@@ -113,7 +113,7 @@ faiss_vector_store = FAISS.from_documents(documents, embedding=fine_tuned_embedd
 
 # Note for user: fill out this section with any query
 
-faiss_vector_store.similarity_search("TODO: Add a query")[0] # Example: "what is databricks"
+faiss_vector_store.similarity_search("TODO")[0]
 
 # COMMAND ----------
 
@@ -132,7 +132,7 @@ external_faiss_vector_store = FAISS.from_documents(documents, embedding=external
 
 # Note for user: fill out this section with any query
 
-external_faiss_vector_store.similarity_search("TODO: Add a query")[0] # Example: "what is databricks"
+external_faiss_vector_store.similarity_search("TODO")[0]
 
 # COMMAND ----------
 
@@ -150,4 +150,4 @@ external_faiss_vector_store.similarity_search("TODO: Add a query")[0] # Example:
 
 # model = ChatOpenAI(model_name="gpt-3.5-turbo")
 # qa = ConversationalRetrievalChain.from_llm(model, retriever=faiss_vector_store.as_retriever())
-# print(qa.run({"question": "TODO: Add a query", "chat_history": []})) # Example: "what is databricks"
+# print(qa.run({"question": "TODO", "chat_history": []}))
