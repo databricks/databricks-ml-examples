@@ -44,12 +44,6 @@ notebook_login()
 
 # COMMAND ----------
 
-# MAGIC %sh
-# MAGIC #mkdir /local_disk0/hf
-# MAGIC cp /root/.cache/huggingface/token /local_disk0/hf/token
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC ## Fine tune the model with `deepspeed`
 # MAGIC
@@ -61,8 +55,8 @@ notebook_login()
 
 !deepspeed \
 --num_gpus=8 \
-scripts/fine_tune.py \
---final_model_output_path="/dbfs/llm" \
+scripts/fine_tune_deepspeed.py \
+--final_model_output_path="/dbfs/llm/llama2-13b-fine-tune" \
 --output_dir="/local_disk0/output" \
 --dataset="mosaicml/dolly_hhrlhf" \
 --model="meta-llama/Llama-2-13b-hf"  \
@@ -84,17 +78,18 @@ scripts/fine_tune.py \
 --evaluation_strategy="steps" \
 --save_strategy="steps" \
 --save_steps=100 \
---num_train_epochs=1
+--num_train_epochs=1 \
+--max_steps=100
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Model checkpoint is saved at `/dbfs/llm`.
+# MAGIC Model checkpoint is saved at `/dbfs/llm/llama2-13b-fine-tune`.
 
 # COMMAND ----------
 
 # MAGIC %sh
-# MAGIC ls /dbfs/llm
+# MAGIC ls -la /dbfs/llm/llama2-13b-fine-tune/
 
 # COMMAND ----------
 
@@ -129,8 +124,8 @@ class LlamaV2(mlflow.pyfunc.PythonModel):
             context.artifacts['repository'], 
             config=config,
             torch_dtype=torch.bfloat16,
+            device_map="auto",
             trust_remote_code=True)
-        self.model.to(device='cuda')
         
         self.model.eval()
 
@@ -187,12 +182,12 @@ input_example=pd.DataFrame({
             "max_tokens": [100]})
 
 # Log the model with its details such as artifacts, pip requirements and input example
-# This may take about 12 minutes to complete
+# This may take about 1.2 minutes to complete
 with mlflow.start_run() as run:  
     mlflow.pyfunc.log_model(
         "model",
         python_model=LlamaV2(),
-        artifacts={'repository' : "/dbfs/llm"},
+        artifacts={'repository' : "/dbfs/llm/llama2-13b-fine-tune/"},
         pip_requirements=[f"torch=={torch.__version__}", 
                           f"transformers=={transformers.__version__}", 
                           f"accelerate=={accelerate.__version__}", "einops", "sentencepiece"],
@@ -203,9 +198,38 @@ with mlflow.start_run() as run:
 # COMMAND ----------
 
 import mlflow
+registered_name = "llama2_13b_fine_tuned_model"
+
+# Register model
+# It takes about 15 min to finish.
+
+result = mlflow.register_model(
+    "runs:/"+run.info.run_id+"/model",
+    registered_name,
+    await_registration_for=1000,
+)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Test the logged model.
+# MAGIC
+# MAGIC Restart the Python to release the GPU memory occupied in Training.
+
+# COMMAND ----------
+
+# MAGIC %pip install -U torch==2.0.1
+# MAGIC %pip install accelerate==0.21.0 transformers[torch]==4.31.0
+# MAGIC %pip install deepspeed==0.9.5 xformers
+# MAGIC dbutils.library.restartPython()
+
+# COMMAND ----------
+
+import mlflow
 import pandas as pd
 
-logged_model = "runs:/"+run.info.run_id+"/model"
+registered_name = "llama2_13b_fine_tuned_model"
+logged_model = f"models:/{registered_name}/1"
 
 # Load model as a PyFuncModel.
 loaded_model = mlflow.pyfunc.load_model(logged_model)
@@ -285,15 +309,10 @@ Thank you for your attention to this matter.
 # COMMAND ----------
 
 input_example=pd.DataFrame({"prompt":instructions, "temperature": [0.2]*len(instructions),"max_tokens": [200]*len(instructions)})
-loaded_model.predict(input_example)
 
 # COMMAND ----------
 
 result = loaded_model.predict(input_example)
-
-# COMMAND ----------
-
-type(result)
 
 # COMMAND ----------
 

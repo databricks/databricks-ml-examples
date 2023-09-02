@@ -35,6 +35,7 @@ LOCAL_OUTPUT_DIR = "/dbfs/llama-2-13b-fine-tune/output"
 DEFAULT_SEED = 68
 
 
+
 @dataclass
 class HFTrainingArguments:
     local_rank: Optional[str] = field(default="-1")
@@ -77,6 +78,48 @@ class HFTrainingArguments:
     bf16: Optional[bool] = field(default=True)
     save_steps: Optional[int] = field(default=100)
     logging_steps: Optional[int] = field(default=10)
+
+
+def get_model(
+    pretrained_name_or_path: str = MODEL_PATH
+) -> AutoModelForCausalLM:
+    logger.info(f"Loading model: {pretrained_name_or_path}")
+
+    config = AutoConfig.from_pretrained(pretrained_name_or_path, trust_remote_code=True)
+    model = transformers.AutoModelForCausalLM.from_pretrained(
+        pretrained_name_or_path,
+        config=config,
+        trust_remote_code="true",
+        torch_dtype=torch.bfloat16,
+        device_map= None,
+    )
+
+    model.config.use_cache = False
+
+    return model
+
+
+def get_tokenizer(
+    pretrained_name_or_path: str,
+) -> PreTrainedTokenizer:
+    tokenizer = AutoTokenizer.from_pretrained(
+        pretrained_name_or_path, trust_remote_code="true", padding_side="left"
+    )
+    tokenizer.pad_token = tokenizer.eos_token
+    return tokenizer
+
+
+def get_model_and_tokenizer(
+    pretrained_name_or_path: str,
+    pretrained_name_or_path_tokenizer: str = None,
+) -> Tuple[AutoModelForCausalLM, PreTrainedTokenizer]:
+    tokenizer = get_tokenizer(
+        pretrained_name_or_path_tokenizer
+        if pretrained_name_or_path_tokenizer is not None
+        else pretrained_name_or_path,
+    )
+    model = get_model(pretrained_name_or_path)
+    return model, tokenizer
 
 
 def load_training_dataset(
@@ -126,126 +169,100 @@ def load_training_dataset(
 
     return train_tokenized_dataset, eval_tokenized_dataset
 
-def get_model(
-    pretrained_name_or_path: str = MODEL_PATH
-) -> AutoModelForCausalLM:
-    logger.info(f"Loading model: {pretrained_name_or_path}")
-
-    model = transformers.AutoModelForCausalLM.from_pretrained(
-        pretrained_name_or_path,
-        trust_remote_code="true",
-        torch_dtype=torch.bfloat16,
-        device_map= None,
-        use_auth_token=True,
-    )
-
-    model.config.use_cache = False
-
-    return model
-
-
-def get_tokenizer(
-    pretrained_name_or_path: str,
-) -> PreTrainedTokenizer:
-    tokenizer = AutoTokenizer.from_pretrained(
-        pretrained_name_or_path, trust_remote_code="true", padding_side="left", use_auth_token=True
-    )
-    tokenizer.pad_token = tokenizer.eos_token
-    return tokenizer
-
 
 def train(args: HFTrainingArguments):
   set_seed(DEFAULT_SEED)
-  # torch.backends.cuda.matmul.allow_tf32 = True
-
   tokenizer = get_tokenizer(args.tokenizer)
   train_dataset, eval_dataset = load_training_dataset(
     tokenizer, path_or_dataset=args.dataset, max_seq_len=args.max_seq_len
   )
-  model = get_model(pretrained_name_or_path=args.model)
 
   if args.deepspeed_config:
     with open(args.deepspeed_config) as json_data:
       deepspeed_config_dict = json.load(json_data)
   else:
     deepspeed_config_dict = None
-  
+
+  torch.backends.cuda.matmul.allow_tf32 = True
+
   training_args = TrainingArguments(
-    local_rank=args.local_rank,
-    output_dir=args.output_dir,
-    per_device_train_batch_size=args.per_device_train_batch_size,
-    per_device_eval_batch_size=args.per_device_eval_batch_size,
-    gradient_checkpointing=args.gradient_checkpointing,
-    gradient_accumulation_steps=args.gradient_accumulation_steps,
-    learning_rate=args.learning_rate,
-    optim=args.optim,
-    num_train_epochs=args.num_train_epochs,
-    max_steps=args.max_steps,
-    adam_beta1=args.adam_beta1,
-    adam_beta2=args.adam_beta2,
-    adam_epsilon=args.adam_epsilon,
-    lr_scheduler_type=args.lr_scheduler_type,
-    warmup_steps=args.warmup_steps,
-    weight_decay=args.weight_decay,
-    logging_strategy=args.logging_strategy,
-    evaluation_strategy=args.evaluation_strategy,
-    save_strategy=args.save_strategy,
-    fp16=args.fp16,
-    bf16=args.bf16,
-    deepspeed=deepspeed_config_dict,
-    save_steps=args.save_steps,
-    logging_steps=args.logging_steps,
-    push_to_hub=False,
-    disable_tqdm=True,
-    report_to=["tensorboard"],
-    # group_by_length=True,
-    ddp_find_unused_parameters=False,
-    # fsdp=["full_shard", "offload"],
+      local_rank=args.local_rank,
+      output_dir=args.output_dir,
+      per_device_train_batch_size=args.per_device_train_batch_size,
+      per_device_eval_batch_size=args.per_device_eval_batch_size,
+      gradient_checkpointing=args.gradient_checkpointing,
+      gradient_accumulation_steps=args.gradient_accumulation_steps,
+      learning_rate=args.learning_rate,
+      optim=args.optim,
+      num_train_epochs=args.num_train_epochs,
+      max_steps=args.max_steps,
+      adam_beta1=args.adam_beta1,
+      adam_beta2=args.adam_beta2,
+      adam_epsilon=args.adam_epsilon,
+      lr_scheduler_type=args.lr_scheduler_type,
+      warmup_steps=args.warmup_steps,
+      weight_decay=args.weight_decay,
+      logging_strategy=args.logging_strategy,
+      evaluation_strategy=args.evaluation_strategy,
+      save_strategy=args.save_strategy,
+      fp16=args.fp16,
+      bf16=args.bf16,
+      deepspeed=deepspeed_config_dict,
+      save_steps=args.save_steps,
+      logging_steps=args.logging_steps,
+      push_to_hub=False,
+      disable_tqdm=True,
+      report_to=["tensorboard"],
+      # group_by_length=True,
+      ddp_find_unused_parameters=False,
+      # fsdp=["full_shard", "offload"],
   )
+
+  model, tokenizer = get_model_and_tokenizer(args.model)
   data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
   trainer = Trainer(
-    model=model,
-    args=training_args,
-    data_collator=data_collator,
-    train_dataset=train_dataset,
-    eval_dataset=eval_dataset,
+      model=model,
+      args=training_args,
+      data_collator=data_collator,
+      train_dataset=train_dataset,
+      eval_dataset=eval_dataset,
   )
 
   logger.info("Training the model")
   trainer.train()
 
   logger.info(f"Saving Model to {args.final_model_output_path}")
-  trainer.save_model(output_dir=args.final_model_output_path)
+  trainer.save_model(args.final_model_output_path)
   tokenizer.save_pretrained(args.final_model_output_path)
 
   logger.info("Training finished.")
 
-
 def main():
-  parser = HfArgumentParser(HFTrainingArguments)
+    parser = HfArgumentParser(HFTrainingArguments)
 
-  parsed = parser.parse_args_into_dataclasses()
-  args: HFTrainingArguments = parsed[0]
+    parsed = parser.parse_args_into_dataclasses()
+    args: HFTrainingArguments = parsed[0]
 
-  train(args)
+    train(args)
 
 
 if __name__ == "__main__":
-  os.environ["HF_HOME"] = "/local_disk0/hf"
-  os.environ["HF_DATASETS_CACHE"] = "/local_disk0/hf"
-  os.environ["TRANSFORMERS_CACHE"] = "/local_disk0/hf"
-  os.environ["NCCL_P2P_DISABLE"] = "1"
-  os.environ["NCCL_DEBUG"] = "INFO"
+    os.environ["HF_HOME"] = "/local_disk0/hf"
+    os.environ["HF_DATASETS_CACHE"] = "/local_disk0/hf"
+    os.environ["TRANSFORMERS_CACHE"] = "/local_disk0/hf"
+    os.environ["NCCL_P2P_DISABLE"] = "1"
 
-  logging.basicConfig(
-    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
-    level=logging.INFO,
-    datefmt="%Y-%m-%d %H:%M:%S",
-  )
+    # os.environ["NCCL_DEBUG"] = "INFO"
 
-  try:
-    main()
-  except Exception:
-    logger.exception("main failed")
-    raise
+    logging.basicConfig(
+        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+        level=logging.INFO,
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    try:
+        main()
+    except Exception:
+        logger.exception("main failed")
+        raise
