@@ -55,7 +55,7 @@ pipeline.tokenizer.pad_token_id = tokenizer.eos_token_id
 # COMMAND ----------
 
 # Define parameters to generate text
-def gen_text(full_prompts, pipeline, use_template=False, **kwargs):
+def gen_text(full_prompts, pipeline, **kwargs):
     if "batch_size" not in kwargs:
         kwargs["batch_size"] = 1
     
