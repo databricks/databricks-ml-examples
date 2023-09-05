@@ -27,7 +27,7 @@ This folder contains:
 ## Model evaluation and benchmark
 
 We have collected the performance of code generation models on [OpenAI HumanEval benchmark](https://github.com/openai/human-eval).
-For a comparison of the multiligual performance, check [big code models leaderboard](https://huggingface.co/spaces/bigcode/bigcode-models-leaderboard).
+For a comparison of the multilingual code generation performance, check [big code models leaderboard](https://huggingface.co/spaces/bigcode/bigcode-models-leaderboard).
 
 | Models                                                                              | HumaEval | Peak memory(MB)  |
 |-------------------------------------------------------------------------------------|----------|------------------|
