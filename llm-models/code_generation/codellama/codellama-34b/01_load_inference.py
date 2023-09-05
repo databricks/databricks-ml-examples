@@ -4,6 +4,11 @@
 # MAGIC
 # MAGIC [Code Llama](https://huggingface.co/codellama) is a collection of pretrained and fine-tuned generative text models ranging in scale from 7 billion to 34 billion parameters. It is trained with 2T tokens and supports context length window upto 10K tokens. The model is designed for general code synthesis and understanding.
 # MAGIC
+# MAGIC This notebook demonstrates how to use
+# MAGIC - [CodeLlama-34b-hf](https://huggingface.co/codellama/CodeLlama-34b-hf)
+# MAGIC - [CodeLlama-34b-hf-instructions](https://huggingface.co/codellama/CodeLlama-34b-hf-instructions)
+# MAGIC - [CodeLlama-34b-hf-python](https://huggingface.co/codellama/CodeLlama-34b-hf-python)
+# MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.3 GPU ML Runtime
 # MAGIC - Instance: `g5.12xlarge` on AWS (4x A10 GPUs), `Standard_NC24ads_A100_v4` on Azure (1x A100 80G GPU)
