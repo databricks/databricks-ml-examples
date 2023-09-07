@@ -20,7 +20,7 @@ This folder contains the following examples for [MPT-30B](https://www.mosaicml.c
 
 | File                                                          | Description                                                                                        | Model used         | GPU minimum requirement |
 |---------------------------------------------------------------|----------------------------------------------------------------------------------------------------|--------------------|-------------------------|
-| [01_load_inference](01_load_inference.py)                     | Environment setup and suggested configurations when using  MPT models for inference on Databricks. | `MPT-30b-instruct` | 1xV100-16GB             |
-| [02_mlflow_logging_inference](02_mlflow_logging_inference.py) | Save, register, and load MPT models with MLflow, and create a Databricks model serving endpoint.   | `MPT-30b-instruct` | 1xV100-16GB             |
-| [03_serve_driver_proxy](03_serve_driver_proxy.py)             | Serve MPT models on the cluster driver node with Flask.                                            | `MPT-30b-instruct` | 1xV100-16GB             |
+| [01_load_inference](01_load_inference.py)                     | Environment setup and suggested configurations when using  MPT models for inference on Databricks. | `MPT-30b-instruct` | 1xA100-80GB             |
+| [02_mlflow_logging_inference](02_mlflow_logging_inference.py) | Save, register, and load MPT models with MLflow, and create a Databricks model serving endpoint.   | `MPT-30b-instruct` | 1xA100-80GB             |
+| [03_serve_driver_proxy](03_serve_driver_proxy.py)             | Serve MPT models on the cluster driver node with Flask.                                            | `MPT-30b-instruct` | 1xA100-80GB             |
 | [04_langchain](04_langchain.py)                               | Wrap a serving endpoint or cluster driver proxy app with LangChain and query it.                   | N/A                | N/A                     |
