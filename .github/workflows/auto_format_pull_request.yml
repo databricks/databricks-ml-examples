@@ -17,7 +17,7 @@ jobs:
       - name: Set autopep8 branch name
         id: vars
         run: |
-          branch-name="autopep8-patches/${{ github.head_ref }}"
+          branch-name="${{ github.head_ref }}"
           echo "branch-name=$branch-name" >> $GITHUB_OUTPUT
       - name: Create Pull Request
         if: steps.autopep8.outputs.exit-code == 2
