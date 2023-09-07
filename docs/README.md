@@ -1,1 +1,1 @@
-<%@include file="docs/open-source-llm-suggestion.md"%>
+<%@include file="open-source-llm-suggestion.md"%>
