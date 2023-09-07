@@ -46,13 +46,21 @@
 # MAGIC
 # MAGIC df_prefixed.write.saveAsTable(<updated table name>)
 # MAGIC ```
-# MAGIC 4. It is recommended to prefix each of your queries with the text "query: " for optimal performance.
+# MAGIC 4. It is recommended to prefix each of your queries with the text
+# "query: " for optimal performance.
 
 # COMMAND ----------
 
-# Note for user: Fill out the following variables with the mlflow models, datasets, and related information in this cell. 
+# Note for user: Fill out the following variables with the mlflow models,
+# datasets, and related information in this cell.
 
 # The run_id from the AutoML Embeddings experiment
+from langchain.vectorstores import FAISS
+from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.document_loaders import PySparkDataFrameLoader
+from typing import Any, Dict, List, Optional
+from langchain.embeddings.base import Embeddings
+import mlflow
 run_id = "TODO"
 # The delta table that you want to be able to query
 delta_table_name = "TODO"
@@ -63,25 +71,28 @@ text_column_name = "TODO"
 
 # MAGIC %md ### Setup
 # MAGIC
-# MAGIC LangChain already has support for [text embeddings models](https://python.langchain.com/docs/integrations/text_embedding/). Here we are wrapping our MLFlow model to work with Langchain.
+# MAGIC LangChain already has support for [text embeddings
+# models](https://python.langchain.com/docs/integrations/text_embedding/).
+# Here we are wrapping our MLFlow model to work with Langchain.
 
 # COMMAND ----------
 
-import mlflow
-from langchain.embeddings.base import Embeddings
-from typing import Any, Dict, List, Optional
 
-# Creating a version of Langchain's Embeddings that can support a mlflow experiment's run_id
+# Creating a version of Langchain's Embeddings that can support a mlflow
+# experiment's run_id
+
 class E5TransformerFromMlflow(Embeddings):
     def __init__(self, run_id: str):
         # Gets the latest model trained by AutoML
-        latest_model_path = mlflow.MlflowClient().list_artifacts(run_id)[-1].path
+        latest_model_path = mlflow.MlflowClient(
+        ).list_artifacts(run_id)[-1].path
         model_uri = f"runs:/{run_id}/{latest_model_path}"
         self.model = mlflow.sentence_transformers.load_model(model_uri)
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         # Prefix each text with "passage: " if they aren't already prefixed
-        texts = [text if text.startswith("passage:") else f"passage: {text}" for text in texts]
+        texts = [text if text.startswith(
+            "passage:") else f"passage: {text}" for text in texts]
         embeddings = self.model.encode(texts)
         return embeddings.tolist()
 
@@ -95,19 +106,21 @@ class E5TransformerFromMlflow(Embeddings):
 
 # MAGIC %md ### Querying the FAISS Vector Store
 # MAGIC
-# MAGIC This is a simple example of creating a FAISS vector store using an existing Spark DataFrame using the [PySparkDataFrameLoader](https://python.langchain.com/docs/integrations/document_loaders/pyspark_dataframe)
+# MAGIC This is a simple example of creating a FAISS vector store using an
+# existing Spark DataFrame using the
+# [PySparkDataFrameLoader](https://python.langchain.com/docs/integrations/document_loaders/pyspark_dataframe)
 
 # COMMAND ----------
 
-from langchain.vectorstores import FAISS
-from langchain.document_loaders import PySparkDataFrameLoader
 
-fine_tuned_embeddings_model = E5TransformerFromMlflow(run_id = run_id)
+fine_tuned_embeddings_model = E5TransformerFromMlflow(run_id=run_id)
 spark_df = spark.table(delta_table_name)
-loader = PySparkDataFrameLoader(spark, spark_df, page_content_column=text_column_name)
+loader = PySparkDataFrameLoader(
+    spark, spark_df, page_content_column=text_column_name)
 documents = loader.load()
 
-faiss_vector_store = FAISS.from_documents(documents, embedding=fine_tuned_embeddings_model)
+faiss_vector_store = FAISS.from_documents(
+    documents, embedding=fine_tuned_embeddings_model)
 
 # COMMAND ----------
 
@@ -119,14 +132,18 @@ faiss_vector_store.similarity_search("TODO")[0]
 
 # MAGIC %md ### Using an Existing Model for Comparison
 # MAGIC
-# MAGIC Here, we will use the model `intfloat/e5-base-v2` ([source](https://huggingface.co/intfloat/e5-base-v2)) from the [MTEB](https://huggingface.co/spaces/mteb/leaderboard) benchmark to compare with our fine-tuned model.
+# MAGIC Here, we will use the model `intfloat/e5-base-v2`
+# ([source](https://huggingface.co/intfloat/e5-base-v2)) from the
+# [MTEB](https://huggingface.co/spaces/mteb/leaderboard) benchmark to
+# compare with our fine-tuned model.
 
 # COMMAND ----------
 
-from langchain.embeddings import HuggingFaceEmbeddings
 
-external_embeddings_model = HuggingFaceEmbeddings(model_name="intfloat/e5-base-v2")
-external_faiss_vector_store = FAISS.from_documents(documents, embedding=external_embeddings_model)
+external_embeddings_model = HuggingFaceEmbeddings(
+    model_name="intfloat/e5-base-v2")
+external_faiss_vector_store = FAISS.from_documents(
+    documents, embedding=external_embeddings_model)
 
 # COMMAND ----------
 
@@ -138,7 +155,11 @@ external_faiss_vector_store.similarity_search("TODO")[0]
 
 # MAGIC %md ### (Optional) Creating a Doc Q&A Bot using OpenAI
 # MAGIC
-# MAGIC We can use OpenAI with the vector store created above to answer questions. Uncomment the following section if you have a valid OpenAI API key. If you want to use another approach, Langchain has support for a variety of other [language models](https://python.langchain.com/docs/integrations/llms/).
+# MAGIC We can use OpenAI with the vector store created above to answer
+# questions. Uncomment the following section if you have a valid OpenAI
+# API key. If you want to use another approach, Langchain has support for
+# a variety of other [language
+# models](https://python.langchain.com/docs/integrations/llms/).
 
 # COMMAND ----------
 

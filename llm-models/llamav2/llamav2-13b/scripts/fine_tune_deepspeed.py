@@ -35,7 +35,6 @@ LOCAL_OUTPUT_DIR = "/dbfs/llama-2-13b-fine-tune/output"
 DEFAULT_SEED = 68
 
 
-
 @dataclass
 class HFTrainingArguments:
     local_rank: Optional[str] = field(default="-1")
@@ -44,7 +43,8 @@ class HFTrainingArguments:
     tokenizer: Optional[str] = field(default=TOKENIZER_PATH)
     max_seq_len: Optional[int] = field(default=256)
 
-    final_model_output_path: Optional[str] = field(default="/local_disk0/final_model")
+    final_model_output_path: Optional[str] = field(
+        default="/local_disk0/final_model")
 
     deepspeed_config: Optional[str] = field(default=CONFIG_PATH)
 
@@ -85,13 +85,14 @@ def get_model(
 ) -> AutoModelForCausalLM:
     logger.info(f"Loading model: {pretrained_name_or_path}")
 
-    config = AutoConfig.from_pretrained(pretrained_name_or_path, trust_remote_code=True)
+    config = AutoConfig.from_pretrained(
+        pretrained_name_or_path, trust_remote_code=True)
     model = transformers.AutoModelForCausalLM.from_pretrained(
         pretrained_name_or_path,
         config=config,
         trust_remote_code="true",
         torch_dtype=torch.bfloat16,
-        device_map= None,
+        device_map=None,
     )
 
     model.config.use_cache = False
@@ -135,7 +136,7 @@ def load_training_dataset(
 
     # Reformat input data, add prompt template if needed
     def _reformat_data(row):
-      return row["prompt"] + row["response"]
+        return row["prompt"] + row["response"]
 
     # Inspired from: https://huggingface.co/learn/nlp-course/chapter7/6?fw=pt
     def tokenize(element):
@@ -171,72 +172,74 @@ def load_training_dataset(
 
 
 def train(args: HFTrainingArguments):
-  set_seed(DEFAULT_SEED)
-  tokenizer = get_tokenizer(args.tokenizer)
-  train_dataset, eval_dataset = load_training_dataset(
-    tokenizer, path_or_dataset=args.dataset, max_seq_len=args.max_seq_len
-  )
+    set_seed(DEFAULT_SEED)
+    tokenizer = get_tokenizer(args.tokenizer)
+    train_dataset, eval_dataset = load_training_dataset(
+        tokenizer, path_or_dataset=args.dataset, max_seq_len=args.max_seq_len
+    )
 
-  if args.deepspeed_config:
-    with open(args.deepspeed_config) as json_data:
-      deepspeed_config_dict = json.load(json_data)
-  else:
-    deepspeed_config_dict = None
+    if args.deepspeed_config:
+        with open(args.deepspeed_config) as json_data:
+            deepspeed_config_dict = json.load(json_data)
+    else:
+        deepspeed_config_dict = None
 
-  torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cuda.matmul.allow_tf32 = True
 
-  training_args = TrainingArguments(
-      local_rank=args.local_rank,
-      output_dir=args.output_dir,
-      per_device_train_batch_size=args.per_device_train_batch_size,
-      per_device_eval_batch_size=args.per_device_eval_batch_size,
-      gradient_checkpointing=args.gradient_checkpointing,
-      gradient_accumulation_steps=args.gradient_accumulation_steps,
-      learning_rate=args.learning_rate,
-      optim=args.optim,
-      num_train_epochs=args.num_train_epochs,
-      max_steps=args.max_steps,
-      adam_beta1=args.adam_beta1,
-      adam_beta2=args.adam_beta2,
-      adam_epsilon=args.adam_epsilon,
-      lr_scheduler_type=args.lr_scheduler_type,
-      warmup_steps=args.warmup_steps,
-      weight_decay=args.weight_decay,
-      logging_strategy=args.logging_strategy,
-      evaluation_strategy=args.evaluation_strategy,
-      save_strategy=args.save_strategy,
-      fp16=args.fp16,
-      bf16=args.bf16,
-      deepspeed=deepspeed_config_dict,
-      save_steps=args.save_steps,
-      logging_steps=args.logging_steps,
-      push_to_hub=False,
-      disable_tqdm=True,
-      report_to=["tensorboard"],
-      # group_by_length=True,
-      ddp_find_unused_parameters=False,
-      # fsdp=["full_shard", "offload"],
-  )
+    training_args = TrainingArguments(
+        local_rank=args.local_rank,
+        output_dir=args.output_dir,
+        per_device_train_batch_size=args.per_device_train_batch_size,
+        per_device_eval_batch_size=args.per_device_eval_batch_size,
+        gradient_checkpointing=args.gradient_checkpointing,
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
+        learning_rate=args.learning_rate,
+        optim=args.optim,
+        num_train_epochs=args.num_train_epochs,
+        max_steps=args.max_steps,
+        adam_beta1=args.adam_beta1,
+        adam_beta2=args.adam_beta2,
+        adam_epsilon=args.adam_epsilon,
+        lr_scheduler_type=args.lr_scheduler_type,
+        warmup_steps=args.warmup_steps,
+        weight_decay=args.weight_decay,
+        logging_strategy=args.logging_strategy,
+        evaluation_strategy=args.evaluation_strategy,
+        save_strategy=args.save_strategy,
+        fp16=args.fp16,
+        bf16=args.bf16,
+        deepspeed=deepspeed_config_dict,
+        save_steps=args.save_steps,
+        logging_steps=args.logging_steps,
+        push_to_hub=False,
+        disable_tqdm=True,
+        report_to=["tensorboard"],
+        # group_by_length=True,
+        ddp_find_unused_parameters=False,
+        # fsdp=["full_shard", "offload"],
+    )
 
-  model, tokenizer = get_model_and_tokenizer(args.model)
-  data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+    model, tokenizer = get_model_and_tokenizer(args.model)
+    data_collator = DataCollatorForLanguageModeling(
+        tokenizer=tokenizer, mlm=False)
 
-  trainer = Trainer(
-      model=model,
-      args=training_args,
-      data_collator=data_collator,
-      train_dataset=train_dataset,
-      eval_dataset=eval_dataset,
-  )
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        data_collator=data_collator,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+    )
 
-  logger.info("Training the model")
-  trainer.train()
+    logger.info("Training the model")
+    trainer.train()
 
-  logger.info(f"Saving Model to {args.final_model_output_path}")
-  trainer.save_model(args.final_model_output_path)
-  tokenizer.save_pretrained(args.final_model_output_path)
+    logger.info(f"Saving Model to {args.final_model_output_path}")
+    trainer.save_model(args.final_model_output_path)
+    tokenizer.save_pretrained(args.final_model_output_path)
 
-  logger.info("Training finished.")
+    logger.info("Training finished.")
+
 
 def main():
     parser = HfArgumentParser(HFTrainingArguments)

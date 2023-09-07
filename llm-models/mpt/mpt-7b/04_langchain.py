@@ -6,7 +6,8 @@
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
-# MAGIC - Instance: `g5.4xlarge` on AWS, `Standard_NV36ads_A10_v5` on Azure (same instance as the driver proxy app)
+# MAGIC - Instance: `g5.4xlarge` on AWS, `Standard_NV36ads_A10_v5` on
+# Azure (same instance as the driver proxy app)
 
 # COMMAND ----------
 
@@ -67,9 +68,9 @@ def transform_input(**request):
     """
     Add more instructions into the prompt.
     """
-    full_prompt = f"""Below is an instruction that describes a task. Write a response that appropriately completes the request. 
+    full_prompt = f"""Below is an instruction that describes a task. Write a response that appropriately completes the request.
     Be concise. Once the request is completed, include no other text. Let's think step by step.
-    ### Instruction: 
+    ### Instruction:
     {request["prompt"]}
     ### Response:
     """

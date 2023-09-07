@@ -32,7 +32,9 @@ from langchain.vectorstores.faiss import FAISS
 # MAGIC %md
 # MAGIC ## Load the Document data
 # MAGIC
-# MAGIC We will use [peft doc](https://huggingface.co/datasets/smangrul/peft_docs) as an example to build the document database.
+# MAGIC We will use [peft
+# doc](https://huggingface.co/datasets/smangrul/peft_docs) as an example
+# to build the document database.
 
 # COMMAND ----------
 
@@ -62,12 +64,16 @@ df = load_dataset('smangrul/peft_docs', split='train')
 chunk_size = 3500
 chunk_overlap = 400
 
+
 def get_chunks(text):
-  # instantiate tokenization utilities
-  text_splitter = TokenTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-  
-  # split text into chunks
-  return text_splitter.split_text(text)
+    # instantiate tokenization utilities
+    text_splitter = TokenTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap)
+
+    # split text into chunks
+    return text_splitter.split_text(text)
+
 
 df = df.map(lambda example: {"chunks": get_chunks(example["chunk_content"])})
 
@@ -76,7 +82,8 @@ df = df.map(lambda example: {"chunks": get_chunks(example["chunk_content"])})
 # MAGIC %md
 # MAGIC ## Create Vector Store
 # MAGIC
-# MAGIC With our data divided into chunks, we are ready to convert these records into searchable embeddings.
+# MAGIC With our data divided into chunks, we are ready to convert these
+# records into searchable embeddings.
 
 # COMMAND ----------
 
@@ -97,7 +104,8 @@ text_inputs = text_df["chunks"].to_list()
 
 model_name = "BAAI/bge-large-en"
 model_kwargs = {'device': 'cuda'}
-encode_kwargs = {'normalize_embeddings': True} # set True to compute cosine similarity
+# set True to compute cosine similarity
+encode_kwargs = {'normalize_embeddings': True}
 model = HuggingFaceBgeEmbeddings(
     model_name=model_name,
     model_kwargs=model_kwargs,
@@ -111,21 +119,20 @@ metadata_inputs = text_df.to_dict(orient='records')
 # COMMAND ----------
 
 vector_store = FAISS.from_texts(
-  embedding=model, 
-  texts=text_inputs, 
-  metadatas=metadata_inputs,
-  distance_strategy="COSINE",
+    embedding=model,
+    texts=text_inputs,
+    metadatas=metadata_inputs,
+    distance_strategy="COSINE",
 )
 
 # COMMAND ----------
 
-# MAGIC %md 
-# MAGIC In order to user the vector store in other notebooks, we can persist vector to storage:
+# MAGIC %md
+# MAGIC In order to user the vector store in other notebooks, we can
+# persist vector to storage:
 
 # COMMAND ----------
 
 vector_store.save_local(folder_path="/dbfs/peft-doc-embed/vector_store")
 
 # COMMAND ----------
-
-

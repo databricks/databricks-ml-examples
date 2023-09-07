@@ -11,7 +11,9 @@
 # MAGIC - MLR: 13.2 ML
 # MAGIC - Instance:
 # MAGIC   - Wrapping a serving endpoint: `i3.xlarge` on AWS, `Standard_DS3_v2` on Azure
-# MAGIC   - Wrapping a cluster driver proxy app: `g5.12xlarge` on AWS, `Standard_NV72ads_A10_v5` or `Standard_NC24ads_A100_v4` on Azure (same instance as the driver proxy app)
+# MAGIC   - Wrapping a cluster driver proxy app: `g5.12xlarge` on AWS,
+# `Standard_NV72ads_A10_v5` or `Standard_NC24ads_A100_v4` on Azure (same
+# instance as the driver proxy app)
 
 # COMMAND ----------
 
@@ -19,7 +21,9 @@
 # MAGIC ## Wrapping a serving endpoint
 # MAGIC The LangChain Databricks integration could wrap a serving endpoint.
 # MAGIC
-# MAGIC It requires a model serving endpoint (see `02_mlflow_logging_inference` for how to create one) to be in the "Ready" state.
+# MAGIC It requires a model serving endpoint (see
+# `02_mlflow_logging_inference` for how to create one) to be in the
+# "Ready" state.
 
 # COMMAND ----------
 
@@ -35,7 +39,10 @@ llm = Databricks(endpoint_name='models.default.llama2_13b_chat_model')
 
 # COMMAND ----------
 
-result = llm("How to master Python in 3 days?", temperature=0.1, max_new_tokens=200)
+result = llm(
+    "How to master Python in 3 days?",
+    temperature=0.1,
+    max_new_tokens=200)
 
 displayHTML(result)
 
@@ -45,13 +52,15 @@ displayHTML(result)
 # MAGIC ## Wrapping a cluster driver proxy app
 # MAGIC The LangChain Databricks integration also works when given the port that runs a proxy.
 # MAGIC
-# MAGIC It requires the driver proxy app of the `03_serve_driver_proxy` example notebook running.
+# MAGIC It requires the driver proxy app of the `03_serve_driver_proxy`
+# example notebook running.
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ### Same cluster
-# MAGIC If using the same cluster that runs the `03_serve_driver_proxy` notebook, specifying `cluster_driver_port` is required.
+# MAGIC If using the same cluster that runs the `03_serve_driver_proxy`
+# notebook, specifying `cluster_driver_port` is required.
 
 # COMMAND ----------
 
@@ -60,7 +69,6 @@ displayHTML(result)
 
 # COMMAND ----------
 
-from langchain.llms import Databricks
 
 # COMMAND ----------
 
@@ -116,7 +124,8 @@ print(llm("How to master Python in 3 days?"))
 
 # MAGIC %md
 # MAGIC ### Different cluster
-# MAGIC If using a different cluster, it's required to also specify `cluster_id`, which you can find in the cluster configuration page.
+# MAGIC If using a different cluster, it's required to also specify
+# `cluster_id`, which you can find in the cluster configuration page.
 
 # COMMAND ----------
 
@@ -125,9 +134,9 @@ print(llm("How to master Python in 3 days?"))
 
 # COMMAND ----------
 
-from langchain.llms import Databricks
 
-# TODO: this cluster ID is a place holder, please replace `cluster_id` with the actual cluster ID of the server proxy app's cluster
+# TODO: this cluster ID is a place holder, please replace `cluster_id`
+# with the actual cluster ID of the server proxy app's cluster
 llm = Databricks(cluster_id="0719-045952-x9g8e3za", cluster_driver_port="7777")
 
 print(llm("How to master Python in 3 days?"))

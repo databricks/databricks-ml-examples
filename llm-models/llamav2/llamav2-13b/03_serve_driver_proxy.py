@@ -14,10 +14,19 @@
 # MAGIC GPU instances that have at least 2 A10 GPUs would be enough for inference on single input (batch inference requires slightly more memory).
 # MAGIC
 # MAGIC Requirements:
-# MAGIC - To get the access of the model on HuggingFace, please visit the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads) and accept our license terms and acceptable use policy before submitting this form. Requests will be processed in 1-2 days.
+# MAGIC - To get the access of the model on HuggingFace, please visit the
+# [Meta
+# website](https://ai.meta.com/resources/models-and-libraries/llama-downloads)
+# and accept our license terms and acceptable use policy before submitting
+# this form. Requests will be processed in 1-2 days.
 
 # COMMAND ----------
 
+from dbruntime.databricks_repl_context import get_context
+from flask import Flask, jsonify, request
+import torch
+import transformers
+from transformers import AutoTokenizer, AutoModelForCausalLM
 from huggingface_hub import notebook_login
 
 # Login to Huggingface to get access to the model
@@ -27,16 +36,17 @@ notebook_login()
 
 # MAGIC %md
 # MAGIC ## Inference
-# MAGIC The example in the model card should also work on Databricks with the same environment.
+# MAGIC The example in the model card should also work on Databricks with
+# the same environment.
 
 # COMMAND ----------
 
 # Load model to text generation pipeline
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import transformers
-import torch
 
-# it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of llamav2-7b-chat in https://huggingface.co/facebook/llamav2-7b-chat/commits/main
+# it is suggested to pin the revision commit hash and not change it for
+# reproducibility because the uploader might change the model afterwards;
+# you can find the commmit history of llamav2-7b-chat in
+# https://huggingface.co/facebook/llamav2-7b-chat/commits/main
 model = "meta-llama/Llama-2-13b-chat-hf"
 revision = "4021a3b5608262f386b2bee683b6348e9228325d"
 
@@ -49,12 +59,14 @@ pipeline = transformers.pipeline(
     trust_remote_code=True,
     device_map="auto",
     revision=revision,
-    return_full_text=False, # don't return the prompt, only return the generated response
+    return_full_text=False,  # don't return the prompt, only return the generated response
 )
 
 # COMMAND ----------
 
-# Prompt templates as follows could guide the model to follow instructions and respond to the input, and empirically it turns out to make Falcon models produce better responses
+# Prompt templates as follows could guide the model to follow instructions
+# and respond to the input, and empirically it turns out to make Falcon
+# models produce better responses
 INSTRUCTION_KEY = "### Instruction:"
 RESPONSE_KEY = "### Response:"
 INTRO_BLURB = "Below is an instruction that describes a task. Write a response that appropriately completes the request."
@@ -70,17 +82,23 @@ PROMPT_FOR_GENERATION_FORMAT = """{intro}
 )
 
 # Define parameters to generate text
+
+
 def gen_text_for_serving(prompt, **kwargs):
     prompt = PROMPT_FOR_GENERATION_FORMAT.format(instruction=prompt)
 
-    # the default max length is pretty small (20), which would cut the generated output in the middle, so it's necessary to increase the threshold to the complete response
+    # the default max length is pretty small (20), which would cut the
+    # generated output in the middle, so it's necessary to increase the
+    # threshold to the complete response
     if "max_new_tokens" not in kwargs:
         kwargs["max_new_tokens"] = 512
 
     # configure other text generation arguments
     kwargs.update(
         {
-            "pad_token_id": tokenizer.eos_token_id,  # Hugging Face sets pad_token_id to eos_token_id by default; setting here to not see redundant message
+            # Hugging Face sets pad_token_id to eos_token_id by default;
+            # setting here to not see redundant message
+            "pad_token_id": tokenizer.eos_token_id,
             "eos_token_id": tokenizer.eos_token_id,
         }
     )
@@ -89,12 +107,18 @@ def gen_text_for_serving(prompt, **kwargs):
 
 # COMMAND ----------
 
+
 print(gen_text_for_serving("How to master Python in 3 days?"))
 
 # COMMAND ----------
 
-# See full list of configurable args: https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
-print(gen_text_for_serving("How to master Python in 3 days?", temperature=0.1, max_new_tokens=100))
+# See full list of configurable args:
+# https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
+print(
+    gen_text_for_serving(
+        "How to master Python in 3 days?",
+        temperature=0.1,
+        max_new_tokens=100))
 
 # COMMAND ----------
 
@@ -103,18 +127,18 @@ print(gen_text_for_serving("How to master Python in 3 days?", temperature=0.1, m
 
 # COMMAND ----------
 
-from flask import Flask, jsonify, request
 
 app = Flask("llama2-13b-chat")
 
+
 @app.route('/', methods=['POST'])
 def serve_falcon_7b_instruct():
-  resp = gen_text_for_serving(**request.json)
-  return jsonify(resp)
+    resp = gen_text_for_serving(**request.json)
+    return jsonify(resp)
 
 # COMMAND ----------
 
-from dbruntime.databricks_repl_context import get_context
+
 ctx = get_context()
 
 port = "7777"
@@ -137,7 +161,7 @@ port = {port}
 # MAGIC def request_llamav2_7b(prompt, temperature=1.0, max_new_tokens=1024):
 # MAGIC   token = ... # TODO: fill in with your Databricks personal access token that can access the cluster that runs this driver proxy notebook
 # MAGIC   url = ...   # TODO: fill in with the driver_proxy_api output above
-# MAGIC   
+# MAGIC
 # MAGIC   headers = {
 # MAGIC       "Content-Type": "application/json",
 # MAGIC       "Authentication": f"Bearer {token}"
@@ -156,11 +180,15 @@ port = {port}
 # MAGIC ```
 # MAGIC Or you could try using ai_query([doucmentation](https://docs.databricks.com/sql/language-manual/functions/ai_query.html)) to call this driver proxy from Databricks SQL with:
 # MAGIC ```
-# MAGIC SELECT ai_query('cluster_ud:port', -- TODO: fill in the cluster_id and port number from output above.  
+# MAGIC SELECT ai_query('cluster_ud:port', -- TODO: fill in the cluster_id and port number from output above.
 # MAGIC   named_struct('prompt', 'What is databricks?', 'temperature', CAST(0.1 AS DOUble)),
 # MAGIC   'returnType', 'STRING')
 # MAGIC ```
-# MAGIC Note: The [AI Functions](https://docs.databricks.com/large-language-models/ai-functions.html) is in the public preview, to enable the feature for your workspace, please submit this [form](https://docs.google.com/forms/d/e/1FAIpQLScVyh5eRioqGwuUVxj9JOiKBAo0-FWi7L3f4QWsKeyldqEw8w/viewform).
+# MAGIC Note: The [AI
+# Functions](https://docs.databricks.com/large-language-models/ai-functions.html)
+# is in the public preview, to enable the feature for your workspace,
+# please submit this
+# [form](https://docs.google.com/forms/d/e/1FAIpQLScVyh5eRioqGwuUVxj9JOiKBAo0-FWi7L3f4QWsKeyldqEw8w/viewform).
 
 # COMMAND ----------
 

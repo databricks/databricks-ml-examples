@@ -7,7 +7,10 @@
 # MAGIC - Runtime: 13.1 GPU ML Runtime
 # MAGIC - Instance: `g5.48xlarge` (8 A10 GPUs) on AWS, or `Standard_NC48ads_A100_v4` (2 A100-80GB GPUs) on Azure
 # MAGIC
-# MAGIC On AWS, the Falcon-40B-Instruct model could fit in a `g5.12xlarge` instance, however it could still be prone to out-of-memory error when the context length is long, or during batch inference. To avoid OOM, we recommend `g5.48xlarge` on AWS.
+# MAGIC On AWS, the Falcon-40B-Instruct model could fit in a `g5.12xlarge`
+# instance, however it could still be prone to out-of-memory error when
+# the context length is long, or during batch inference. To avoid OOM, we
+# recommend `g5.48xlarge` on AWS.
 
 # COMMAND ----------
 
@@ -24,12 +27,17 @@
 
 # MAGIC %md
 # MAGIC ## Inference
-# MAGIC The below snippets are adapted from [the model card of falcon-40b-instruct](https://huggingface.co/tiiuae/falcon-40b-instruct). The example in the model card should also work on Databricks with the same environment.
+# MAGIC The below snippets are adapted from [the model card of
+# falcon-40b-instruct](https://huggingface.co/tiiuae/falcon-40b-instruct).
+# The example in the model card should also work on Databricks with the
+# same environment.
 
 # COMMAND ----------
 
 # Load model to text generation pipeline
 
+import logging
+import time
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import transformers
 import torch
@@ -44,7 +52,11 @@ pipeline = transformers.pipeline(
     torch_dtype=torch.bfloat16,
     trust_remote_code=True,
     device_map="auto",
-    revision="1e7fdcc9f45d13704f3826e99937917e007cd975", # it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of falcon-40b-instruct in https://huggingface.co/tiiuae/falcon-40b-instruct/commits/main
+    # it is suggested to pin the revision commit hash and not change it for
+    # reproducibility because the uploader might change the model afterwards;
+    # you can find the commmit history of falcon-40b-instruct in
+    # https://huggingface.co/tiiuae/falcon-40b-instruct/commits/main
+    revision="1e7fdcc9f45d13704f3826e99937917e007cd975",
 )
 
 # Required tokenizer setting for batch inference
@@ -52,9 +64,12 @@ pipeline.tokenizer.pad_token_id = tokenizer.eos_token_id
 
 # COMMAND ----------
 
-# Define prompt template, the format below is from: http://fastml.com/how-to-train-your-own-chatgpt-alpaca-style-part-one/
+# Define prompt template, the format below is from:
+# http://fastml.com/how-to-train-your-own-chatgpt-alpaca-style-part-one/
 
-# Prompt templates as follows could guide the model to follow instructions and respond to the input, and empirically it turns out to make Falcon models produce better responses
+# Prompt templates as follows could guide the model to follow instructions
+# and respond to the input, and empirically it turns out to make Falcon
+# models produce better responses
 
 INSTRUCTION_KEY = "### Instruction:"
 RESPONSE_KEY = "### Response:"
@@ -73,6 +88,8 @@ PROMPT_FOR_GENERATION_FORMAT = """{intro}
 # COMMAND ----------
 
 # Define parameters to generate text
+
+
 def gen_text(prompts, use_template=False, **kwargs):
     if use_template:
         full_prompts = [
@@ -84,16 +101,22 @@ def gen_text(prompts, use_template=False, **kwargs):
 
     if "batch_size" not in kwargs:
         kwargs["batch_size"] = 1
-    
-    # the default max length is pretty small (20), which would cut the generated output in the middle, so it's necessary to increase the threshold to the complete response
+
+    # the default max length is pretty small (20), which would cut the
+    # generated output in the middle, so it's necessary to increase the
+    # threshold to the complete response
     if "max_new_tokens" not in kwargs:
         kwargs["max_new_tokens"] = 512
 
-    # configure other text generation arguments, see common configurable args here: https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
+    # configure other text generation arguments, see common configurable args
+    # here:
+    # https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
     kwargs.update(
         {
             "do_sample": True,  # by default when do_sample=False the generation method is greedy decoding; with do_sample=True, popular arguments such as temperature, top_p, and top_k could take effect
-            "pad_token_id": tokenizer.eos_token_id,  # Hugging Face sets pad_token_id to eos_token_id by default; setting here to not see redundant message
+            # Hugging Face sets pad_token_id to eos_token_id by default;
+            # setting here to not see redundant message
+            "pad_token_id": tokenizer.eos_token_id,
             "eos_token_id": tokenizer.eos_token_id,
         }
     )
@@ -110,13 +133,18 @@ def gen_text(prompts, use_template=False, **kwargs):
 
 # COMMAND ----------
 
+
 results = gen_text(["What is a large language model?"])
 print(results[0])
 
 # COMMAND ----------
 
 # Use args such as temperature and max_new_tokens to control text generation
-results = gen_text(["What is a large language model?"], temperature=0.5, max_new_tokens=100, use_template=True)
+results = gen_text(
+    ["What is a large language model?"],
+    temperature=0.5,
+    max_new_tokens=100,
+    use_template=True)
 print(results[0])
 
 # COMMAND ----------
@@ -131,9 +159,11 @@ Although some of her works now belong to the classics of the Western tradition o
 
 Arendt’s political thought cannot, in this sense, be identified either with the liberal tradition or with the claims advanced by a number of its critics. Arendt did not conceive of politics as a means for the satisfaction of individual preferences, nor as a way to integrate individuals around a shared conception of the good. Her conception of politics is based instead on the idea of active citizenship, that is, on the value and importance of civic engagement and collective deliberation about all matters affecting the political community. If there is a tradition of thought with which Arendt can be identified, it is the classical tradition of civic republicanism originating in Aristotle and embodied in the writings of Machiavelli, Montesquieu, Jefferson, and Tocqueville. According to this tradition politics finds its authentic expression whenever citizens gather together in a public space to deliberate and decide about matters of collective concern. Political activity is valued not because it may lead to agreement or to a shared conception of the good, but because it enables each citizen to exercise his or her powers of agency, to develop the capacities for judgment and to attain by concerted action some measure of political efficacy."""
 
+
 def get_num_tokens(text):
     inputs = tokenizer(text, return_tensors="pt").input_ids.to("cuda")
     return inputs.shape[1]
+
 
 print('number of tokens for input:', get_num_tokens(long_input))
 
@@ -146,12 +176,10 @@ print(results[0])
 # MAGIC ## Measure inference speed
 # MAGIC Text generation speed is often measured with token/s, which is the average number of tokens that are generated by the model per second.
 # MAGIC
-# MAGIC Falcon-40B-Instruct is expected to generate text slower than the 7B model.
+# MAGIC Falcon-40B-Instruct is expected to generate text slower than the
+# 7B model.
 
 # COMMAND ----------
-
-import time
-import logging
 
 
 def get_gen_text_throughput(prompt, use_template=True, **kwargs):
@@ -171,7 +199,9 @@ def get_gen_text_throughput(prompt, use_template=True, **kwargs):
             "do_sample": True,
             "pad_token_id": tokenizer.eos_token_id,
             "eos_token_id": tokenizer.eos_token_id,
-            "return_tensors": True,  # make the pipeline return token ids instead of decoded text to get the number of generated tokens
+            # make the pipeline return token ids instead of decoded text to get
+            # the number of generated tokens
+            "return_tensors": True,
         }
     )
 
@@ -191,19 +221,24 @@ def get_gen_text_throughput(prompt, use_template=True, **kwargs):
     )
     result = "".join(result)
 
-    return ((n_tokens - num_input_tokens) / duration, (n_tokens - num_input_tokens), result)
+    return ((n_tokens - num_input_tokens) / duration,
+            (n_tokens - num_input_tokens), result)
 
 # COMMAND ----------
 
-throughput, n_tokens, result = get_gen_text_throughput("What is ML?", max_new_tokens=200, use_template=True)
+
+throughput, n_tokens, result = get_gen_text_throughput(
+    "What is ML?", max_new_tokens=200, use_template=True)
 
 print(f"{throughput} tokens/sec, {n_tokens} tokens (not including prompt)")
 print(result)
 
 # COMMAND ----------
 
-# When the context is long or the generated text is long, it takes longer to generate each token in average
-throughput, n_tokens, result = get_gen_text_throughput(long_input, max_new_tokens=200, use_template=True)
+# When the context is long or the generated text is long, it takes longer
+# to generate each token in average
+throughput, n_tokens, result = get_gen_text_throughput(
+    long_input, max_new_tokens=200, use_template=True)
 
 print(f"{throughput} tokens/sec, {n_tokens} tokens (not including prompt)")
 print(result)

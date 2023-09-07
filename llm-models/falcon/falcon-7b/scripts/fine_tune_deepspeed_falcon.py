@@ -32,10 +32,10 @@ PROMPT_NO_INPUT_FORMAT = """{intro}
 {instruction_key}
 {instruction}
 {response_key}""".format(
-  intro=INTRO_BLURB,
-  instruction_key=INSTRUCTION_KEY,
-  instruction="{instruction}",
-  response_key=RESPONSE_KEY,
+    intro=INTRO_BLURB,
+    instruction_key=INSTRUCTION_KEY,
+    instruction="{instruction}",
+    response_key=RESPONSE_KEY,
 )
 
 PROMPT_WITH_INPUT_FORMAT = """{intro}
@@ -44,12 +44,12 @@ PROMPT_WITH_INPUT_FORMAT = """{intro}
 {input_key}
 {input}
 {response_key}""".format(
-  intro=INTRO_BLURB,
-  instruction_key=INSTRUCTION_KEY,
-  instruction="{instruction}",
-  input_key=INPUT_KEY,
-  input="{input}",
-  response_key=RESPONSE_KEY,
+    intro=INTRO_BLURB,
+    instruction_key=INSTRUCTION_KEY,
+    instruction="{instruction}",
+    input_key=INPUT_KEY,
+    input="{input}",
+    response_key=RESPONSE_KEY,
 )
 
 ROOT_PATH = Path(__file__).parent.parent
@@ -59,15 +59,17 @@ DEFAULT_TRAINING_DATASET = "databricks/databricks-dolly-15k"
 CONFIG_PATH = "../../config/a10_config.json"
 LOCAL_OUTPUT_DIR = "/local_disk0/output"
 DEFAULT_SEED = 68
-REVISION = "2f5c3cd4eace6be6c0f12981f377fb35e5bf6ee5"  # most recent in https://huggingface.co/tiiuae/falcon-7b/commits/main as of 6/29/2023
+# most recent in https://huggingface.co/tiiuae/falcon-7b/commits/main as
+# of 6/29/2023
+REVISION = "2f5c3cd4eace6be6c0f12981f377fb35e5bf6ee5"
 MAX_SEQ_LEN = 512
 
 
 def load_training_dataset(
-  tokenizer,
-  path_or_dataset: str = DEFAULT_TRAINING_DATASET,
-  seed: int = DEFAULT_SEED
-  ) -> Dataset:
+    tokenizer,
+    path_or_dataset: str = DEFAULT_TRAINING_DATASET,
+    seed: int = DEFAULT_SEED
+) -> Dataset:
     """
     This function is used for preprocessing the databricks-dolly-15k dataset.
     To fine-tune on your own dataset, you would need to customize the function.
@@ -78,32 +80,37 @@ def load_training_dataset(
     logger.info(f"Found {dataset.num_rows} rows", )
 
     def _reformat_data(rec):
-      # Each row of databricks-dolly-15k contains fields "instruction", "response", and optionally the "context" field
-      instruction = rec["instruction"]
-      response = rec["response"]
-      context = rec.get("context")
+        # Each row of databricks-dolly-15k contains fields "instruction",
+        # "response", and optionally the "context" field
+        instruction = rec["instruction"]
+        response = rec["response"]
+        context = rec.get("context")
 
-      if context:
-        questions = PROMPT_WITH_INPUT_FORMAT.format(instruction=instruction, input=context)
-      else:
-        questions = PROMPT_NO_INPUT_FORMAT.format(instruction=instruction)
-        
-      return {"text": f"{questions}\n{response}"}
+        if context:
+            questions = PROMPT_WITH_INPUT_FORMAT.format(
+                instruction=instruction, input=context)
+        else:
+            questions = PROMPT_NO_INPUT_FORMAT.format(instruction=instruction)
+
+        return {"text": f"{questions}\n{response}"}
 
     dataset = dataset.map(_reformat_data)
 
     def tokenize_function(allEntries):
-      return tokenizer(allEntries['text'], truncation=True, max_length=MAX_SEQ_LEN)
+        return tokenizer(
+            allEntries['text'],
+            truncation=True,
+            max_length=MAX_SEQ_LEN)
 
     dataset = dataset.map(tokenize_function)
 
-    # databricks-dolly-15k only contains the "train" split, so we split it to get an evaluation set
+    # databricks-dolly-15k only contains the "train" split, so we split it to
+    # get an evaluation set
     split_dataset = dataset.train_test_split(test_size=1000, seed=seed)
     train_tokenized_dataset = split_dataset['train']
     eval_tokenized_dataset = split_dataset['test']
 
     return train_tokenized_dataset, eval_tokenized_dataset
-
 
 
 def load_model(
@@ -128,14 +135,15 @@ def load_model(
     )
 
     model.config.use_cache = False
-    
+
     return model
 
 
 def get_tokenizer(
     pretrained_tokenizer_name_or_path: str = TOKENIZER_PATH,
 ) -> PreTrainedTokenizer:
-    tokenizer = AutoTokenizer.from_pretrained(pretrained_tokenizer_name_or_path, revision=REVISION)
+    tokenizer = AutoTokenizer.from_pretrained(
+        pretrained_tokenizer_name_or_path, revision=REVISION)
     tokenizer.pad_token = tokenizer.eos_token
     return tokenizer
 
@@ -203,7 +211,8 @@ def train(
         report_to=[],
     )
 
-    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+    data_collator = DataCollatorForLanguageModeling(
+        tokenizer=tokenizer, mlm=False)
 
     trainer = Trainer(
         model=model,
@@ -229,34 +238,53 @@ def train(
 
 
 @click.command()
-@click.option("--input-model", type=str, help="Input model to fine tune", default=MODEL_PATH)
-@click.option("--local-output-dir", type=str, help="Write directly to this local path", default=LOCAL_OUTPUT_DIR)
-@click.option("--dbfs-output-dir", type=str, help="Sync data to this path on DBFS")
-@click.option("--epochs", type=int, default=1, help="Number of epochs to train for.")
-@click.option("--per-device-train-batch-size", type=int, default=1, help="Batch size to use for training.")
-@click.option("--per-device-eval-batch-size", type=int, default=1, help="Batch size to use for evaluation.")
-@click.option("--warmup-steps", type=int, default=20, help="Number of steps to warm up to learning rate")
+@click.option("--input-model",
+              type=str,
+              help="Input model to fine tune",
+              default=MODEL_PATH)
+@click.option("--local-output-dir",
+              type=str,
+              help="Write directly to this local path",
+              default=LOCAL_OUTPUT_DIR)
+@click.option("--dbfs-output-dir", type=str,
+              help="Sync data to this path on DBFS")
+@click.option("--epochs", type=int, default=1,
+              help="Number of epochs to train for.")
+@click.option("--per-device-train-batch-size", type=int,
+              default=1, help="Batch size to use for training.")
+@click.option("--per-device-eval-batch-size", type=int,
+              default=1, help="Batch size to use for evaluation.")
+@click.option("--warmup-steps", type=int, default=20,
+              help="Number of steps to warm up to learning rate")
 @click.option("--logging-steps", type=int, default=10, help="How often to log")
-@click.option("--eval-steps", type=int, default=50, help="How often to run evaluation on test records")
-@click.option("--save-steps", type=int, default=100, help="How often to checkpoint the model")
-@click.option("--max-steps", type=int, default=200, help="Maximum steps to run")
-@click.option("--save-total-limit", type=int, default=10, help="Maximum number of checkpoints to keep on disk")
-@click.option("--lr", type=float, default=1e-5, help="Learning rate to use for training.")
-@click.option("--seed", type=int, default=DEFAULT_SEED, help="Seed to use for training.")
+@click.option("--eval-steps", type=int, default=50,
+              help="How often to run evaluation on test records")
+@click.option("--save-steps", type=int, default=100,
+              help="How often to checkpoint the model")
+@click.option("--max-steps", type=int, default=200,
+              help="Maximum steps to run")
+@click.option("--save-total-limit", type=int, default=10,
+              help="Maximum number of checkpoints to keep on disk")
+@click.option("--lr", type=float, default=1e-5,
+              help="Learning rate to use for training.")
+@click.option("--seed", type=int, default=DEFAULT_SEED,
+              help="Seed to use for training.")
 @click.option(
     "--gradient-checkpointing/--no-gradient-checkpointing",
     is_flag=True,
     default=True,
     help="Use gradient checkpointing?",
 )
-@click.option("--gradient-accumulation-steps", type=int, default=8, help="Number of steps to accumulate gradients until stepping the optimizer")
+@click.option("--gradient-accumulation-steps", type=int, default=8,
+              help="Number of steps to accumulate gradients until stepping the optimizer")
 @click.option(
     "--local_rank",
     type=str,
     default=True,
     help="Provided by deepspeed to identify which instance this process is when performing multi-GPU training.",
 )
-@click.option("--bf16", type=bool, default=True, help="Whether to use bf16 (preferred on A10's and A100's).")
+@click.option("--bf16", type=bool, default=True,
+              help="Whether to use bf16 (preferred on A10's and A100's).")
 def main(**kwargs):
     train(**kwargs)
 

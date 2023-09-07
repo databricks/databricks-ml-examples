@@ -1,17 +1,19 @@
 # Databricks notebook source
 # install Hugging Face Libraries
-%pip install  git+https://github.com/huggingface/peft.git
+import requests
+from peft import PeftModel, PeftConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from PIL import Image
+from peft import LoraConfig, get_peft_model
+from transformers import AutoModelForVision2Seq, AutoProcessor
+from torch.utils.data import DataLoader, Dataset
+from datasets import load_dataset
+import torch
+%pip install  git + https: // github.com / huggingface / peft.git
 # install Hugging Face Libraries
 %pip install  bitsandbytes
 
 # COMMAND ----------
-
-import torch
-from datasets import load_dataset
-from torch.utils.data import DataLoader, Dataset
-from transformers import AutoModelForVision2Seq, AutoProcessor
-
-from peft import LoraConfig, get_peft_model
 
 
 # Let's define the LoraConfig
@@ -27,12 +29,12 @@ config = LoraConfig(
 
 model_id = "Salesforce/blip2-flan-t5-xl"
 # We load our model and processor using `transformers`
-model = AutoModelForVision2Seq.from_pretrained(model_id, load_in_8bit=True,device_map='auto')
+model = AutoModelForVision2Seq.from_pretrained(
+    model_id, load_in_8bit=True, device_map='auto')
 processor = AutoProcessor.from_pretrained(model_id)
 
 # COMMAND ----------
 
-from datasets import load_dataset
 fashion_dir = '/dbfs/FileStore/shared_uploads/avinash.sooriyarachchi@databricks.com/fashion_images/'
 dataset = load_dataset("imagefolder", data_dir=fashion_dir, split="train")
 
@@ -50,7 +52,6 @@ dataset[100]
 
 # COMMAND ----------
 
-from PIL import Image
 display(dataset[100]['image'])
 
 # COMMAND ----------
@@ -60,6 +61,7 @@ model = get_peft_model(model, config)
 model.print_trainable_parameters()
 
 # COMMAND ----------
+
 
 class ImageCaptioningDataset(Dataset):
     def __init__(self, dataset, processor):
@@ -71,7 +73,10 @@ class ImageCaptioningDataset(Dataset):
 
     def __getitem__(self, idx):
         item = self.dataset[idx]
-        encoding = self.processor(images=item["image"], padding="max_length", return_tensors="pt")
+        encoding = self.processor(
+            images=item["image"],
+            padding="max_length",
+            return_tensors="pt")
         # remove batch dimension
         encoding = {k: v.squeeze() for k, v in encoding.items()}
         encoding["text"] = item["text"]
@@ -83,7 +88,8 @@ def collator(batch):
     processed_batch = {}
     for key in batch[0].keys():
         if key != "text":
-            processed_batch[key] = torch.stack([example[key] for example in batch])
+            processed_batch[key] = torch.stack(
+                [example[key] for example in batch])
         else:
             text_inputs = processor.tokenizer(
                 [example["text"] for example in batch], padding=True, return_tensors="pt"
@@ -96,16 +102,21 @@ def collator(batch):
 # COMMAND ----------
 
 train_dataset = ImageCaptioningDataset(dataset, processor)
-train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=4, collate_fn=collator)
+train_dataloader = DataLoader(
+    train_dataset,
+    shuffle=True,
+    batch_size=4,
+    collate_fn=collator)
 
 optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5)
 
-#Do not bother doing this without a GPU. It will be excrutiatingly slow and resource intensive
-device = "cuda"# if torch.cuda.is_available() else "cpu"
+# Do not bother doing this without a GPU. It will be excrutiatingly slow
+# and resource intensive
+device = "cuda"  # if torch.cuda.is_available() else "cpu"
 
 # COMMAND ----------
 
-#model_save_dir = '/dbfs/FileStore/shared_uploads/avinash.sooriyarachchi@databricks.com/fashion_model_10_epoch/'
+# model_save_dir = '/dbfs/FileStore/shared_uploads/avinash.sooriyarachchi@databricks.com/fashion_model_10_epoch/'
 model_save_dir = '/dbfs/FileStore/shared_uploads/avinash.sooriyarachchi@databricks.com/fashion_model_30_epoch/'
 
 # COMMAND ----------
@@ -118,7 +129,10 @@ for epoch in range(30):
         input_ids = batch.pop("input_ids").to(device)
         pixel_values = batch.pop("pixel_values").to(device, torch.float16)
 
-        outputs = model(input_ids=input_ids, pixel_values=pixel_values, labels=input_ids)
+        outputs = model(
+            input_ids=input_ids,
+            pixel_values=pixel_values,
+            labels=input_ids)
 
         loss = outputs.loss
 
@@ -128,60 +142,57 @@ for epoch in range(30):
 
         optimizer.step()
         optimizer.zero_grad()
-    model.save_pretrained(model_save_dir+str(epoch))
-
+    model.save_pretrained(model_save_dir + str(epoch))
 
 
 # COMMAND ----------
 
-processor.save_pretrained('/dbfs/FileStore/shared_uploads/avinash.sooriyarachchi@databricks.com/fashion_model_30_epoch/processor/')
+processor.save_pretrained(
+    '/dbfs/FileStore/shared_uploads/avinash.sooriyarachchi@databricks.com/fashion_model_30_epoch/processor/')
 
 # COMMAND ----------
 
-#epoch2_loc = '/dbfs/FileStore/shared_uploads/avinash.sooriyarachchi@databricks.com/fashion_model/1'
+# epoch2_loc = '/dbfs/FileStore/shared_uploads/avinash.sooriyarachchi@databricks.com/fashion_model/1'
 
 # COMMAND ----------
 
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from peft import PeftModel, PeftConfig
 
 # COMMAND ----------
 
-import torch
-from datasets import load_dataset
-from torch.utils.data import DataLoader, Dataset
-from transformers import AutoModelForVision2Seq, AutoProcessor
 
-from peft import LoraConfig, get_peft_model
 model_id = "Salesforce/blip2-flan-t5-xl"
 
 # We load our model and processor using `transformers`
-model = AutoModelForVision2Seq.from_pretrained(model_id, load_in_8bit=True,device_map='auto')
-processor = AutoProcessor.from_pretrained('/dbfs/FileStore/shared_uploads/avinash.sooriyarachchi@databricks.com/fashion_model_10_epoch/processor/')
+model = AutoModelForVision2Seq.from_pretrained(
+    model_id, load_in_8bit=True, device_map='auto')
+processor = AutoProcessor.from_pretrained(
+    '/dbfs/FileStore/shared_uploads/avinash.sooriyarachchi@databricks.com/fashion_model_10_epoch/processor/')
 
 # COMMAND ----------
 
-model_finetuned = PeftModel.from_pretrained(model, '/dbfs/FileStore/shared_uploads/avinash.sooriyarachchi@databricks.com/fashion_model_30_epoch/29')
+model_finetuned = PeftModel.from_pretrained(
+    model,
+    '/dbfs/FileStore/shared_uploads/avinash.sooriyarachchi@databricks.com/fashion_model_30_epoch/29')
 
 
 # COMMAND ----------
 
-from PIL import Image
-import requests
-#img_url = "https://www.jcrew.com/s7-img-facade/AS211_RD5697_m?hei=850&crop=0,0,680,0"
+# img_url = "https://www.jcrew.com/s7-img-facade/AS211_RD5697_m?hei=850&crop=0,0,680,0"
 img_url = "https://images.unsplash.com/photo-1618517351616-38fb9c5210c6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8bWFuJTIwdCUyMHNoaXJ0fGVufDB8fDB8fHww&w=1000&q=80"
 raw_image = Image.open(requests.get(img_url, stream=True).raw).convert('RGB')
 display(raw_image)
 
 # COMMAND ----------
 
-model_finetuned = PeftModel.from_pretrained(model, '/dbfs/FileStore/shared_uploads/avinash.sooriyarachchi@databricks.com/fashion_model_30_epoch/10')
+model_finetuned = PeftModel.from_pretrained(
+    model,
+    '/dbfs/FileStore/shared_uploads/avinash.sooriyarachchi@databricks.com/fashion_model_30_epoch/10')
 
 
 # COMMAND ----------
 
-inputs = processor(raw_image,return_tensors="pt").to('cuda', torch.float16)
+inputs = processor(raw_image, return_tensors="pt").to('cuda', torch.float16)
 generated_ids = model.generate(**inputs, max_new_tokens=150)
-generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0].strip()
+generated_text = processor.batch_decode(
+    generated_ids, skip_special_tokens=True)[0].strip()
 print(generated_text)

@@ -10,10 +10,23 @@
 # MAGIC - Runtime: 13.2 GPU ML Runtime
 # MAGIC - Instance: `g5.8xlarge` on AWS, `Standard_NV36ads_A10_v5` on Azure
 # MAGIC
-# MAGIC We leverage the PEFT library from Hugging Face, as well as QLoRA for more memory efficient finetuning.
+# MAGIC We leverage the PEFT library from Hugging Face, as well as QLoRA
+# for more memory efficient finetuning.
 
 # COMMAND ----------
 
+from mlflow.models.signature import ModelSignature
+import pandas as pd
+from mlflow.types import DataType, Schema, ColSpec
+import mlflow
+from huggingface_hub import snapshot_download
+from peft import PeftModel, PeftConfig
+from trl import SFTTrainer
+from transformers import TrainingArguments
+from peft import LoraConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoTokenizer
+import torch
+from datasets import load_dataset
 from huggingface_hub import notebook_login
 
 # Login to Huggingface to get access to the model
@@ -24,7 +37,13 @@ notebook_login()
 # MAGIC %md
 # MAGIC ## Install required packages
 # MAGIC
-# MAGIC Run the cells below to setup and install the required libraries. For our experiment we will need `accelerate`, `peft`, `transformers`, `datasets` and TRL to leverage the recent [`SFTTrainer`](https://huggingface.co/docs/trl/main/en/sft_trainer). We will use `bitsandbytes` to [quantize the base model into 4bit](https://huggingface.co/blog/4bit-transformers-bitsandbytes). We will also install `einops` as it is a requirement to load Falcon models.
+# MAGIC Run the cells below to setup and install the required libraries.
+# For our experiment we will need `accelerate`, `peft`, `transformers`,
+# `datasets` and TRL to leverage the recent
+# [`SFTTrainer`](https://huggingface.co/docs/trl/main/en/sft_trainer). We
+# will use `bitsandbytes` to [quantize the base model into
+# 4bit](https://huggingface.co/blog/4bit-transformers-bitsandbytes). We
+# will also install `einops` as it is a requirement to load Falcon models.
 
 # COMMAND ----------
 
@@ -37,11 +56,12 @@ notebook_login()
 # MAGIC %md
 # MAGIC ## Dataset
 # MAGIC
-# MAGIC We will use the [databricks-dolly-15k ](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
+# MAGIC We will use the [databricks-dolly-15k
+# ](https://huggingface.co/datasets/databricks/databricks-dolly-15k)
+# dataset.
 
 # COMMAND ----------
 
-from datasets import load_dataset
 
 dataset_name = "databricks/databricks-dolly-15k"
 dataset = load_dataset(dataset_name, split="train")
@@ -63,12 +83,12 @@ PROMPT_NO_INPUT_FORMAT = """{intro}
 {response}
 
 {end_key}""".format(
-  intro=INTRO_BLURB,
-  instruction_key=INSTRUCTION_KEY,
-  instruction="{instruction}",
-  response_key=RESPONSE_KEY,
-  response="{response}",
-  end_key=END_KEY
+    intro=INTRO_BLURB,
+    instruction_key=INSTRUCTION_KEY,
+    instruction="{instruction}",
+    response_key=RESPONSE_KEY,
+    response="{response}",
+    end_key=END_KEY
 )
 
 PROMPT_WITH_INPUT_FORMAT = """{intro}
@@ -83,26 +103,30 @@ PROMPT_WITH_INPUT_FORMAT = """{intro}
 {response}
 
 {end_key}""".format(
-  intro=INTRO_BLURB,
-  instruction_key=INSTRUCTION_KEY,
-  instruction="{instruction}",
-  input_key=INPUT_KEY,
-  input="{input}",
-  response_key=RESPONSE_KEY,
-  response="{response}",
-  end_key=END_KEY
+    intro=INTRO_BLURB,
+    instruction_key=INSTRUCTION_KEY,
+    instruction="{instruction}",
+    input_key=INPUT_KEY,
+    input="{input}",
+    response_key=RESPONSE_KEY,
+    response="{response}",
+    end_key=END_KEY
 )
 
-def apply_prompt_template(examples):
-  instruction = examples["instruction"]
-  response = examples["response"]
-  context = examples.get("context")
 
-  if context:
-    full_prompt = PROMPT_WITH_INPUT_FORMAT.format(instruction=instruction, response=response, input=context)
-  else:
-    full_prompt = PROMPT_NO_INPUT_FORMAT.format(instruction=instruction, response=response)
-  return { "text": full_prompt }
+def apply_prompt_template(examples):
+    instruction = examples["instruction"]
+    response = examples["response"]
+    context = examples.get("context")
+
+    if context:
+        full_prompt = PROMPT_WITH_INPUT_FORMAT.format(
+            instruction=instruction, response=response, input=context)
+    else:
+        full_prompt = PROMPT_NO_INPUT_FORMAT.format(
+            instruction=instruction, response=response)
+    return {"text": full_prompt}
+
 
 dataset = dataset.map(apply_prompt_template)
 
@@ -115,12 +139,11 @@ dataset["text"][0]
 # MAGIC %md
 # MAGIC ## Loading the model
 # MAGIC
-# MAGIC In this section we will load the [LLaMAV2](), quantize it in 4bit and attach LoRA adapters on it.
+# MAGIC In this section we will load the [LLaMAV2](), quantize it in 4bit
+# and attach LoRA adapters on it.
 
 # COMMAND ----------
 
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoTokenizer
 
 model = "meta-llama/Llama-2-7b-hf"
 revision = "351b2c357c69b4779bde72c0e7f7da639443d904"
@@ -145,13 +168,15 @@ model.config.use_cache = False
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Load the configuration file in order to create the LoRA model. 
+# MAGIC Load the configuration file in order to create the LoRA model.
 # MAGIC
-# MAGIC According to QLoRA paper, it is important to consider all linear layers in the transformer block for maximum performance. Therefore we will add `dense`, `dense_h_to_4_h` and `dense_4h_to_h` layers in the target modules in addition to the mixed query key value layer.
+# MAGIC According to QLoRA paper, it is important to consider all linear
+# layers in the transformer block for maximum performance. Therefore we
+# will add `dense`, `dense_h_to_4_h` and `dense_4h_to_h` layers in the
+# target modules in addition to the mixed query key value layer.
 
 # COMMAND ----------
 
-from peft import LoraConfig
 
 lora_alpha = 16
 lora_dropout = 0.1
@@ -163,7 +188,14 @@ peft_config = LoraConfig(
     r=lora_r,
     bias="none",
     task_type="CAUSAL_LM",
-    target_modules=['q_proj', 'o_proj', 'gate_proj', 'up_proj', 'down_proj', 'k_proj', 'v_proj'] # Choose all linear layers from the model
+    target_modules=[
+        'q_proj',
+        'o_proj',
+        'gate_proj',
+        'up_proj',
+        'down_proj',
+        'k_proj',
+        'v_proj']  # Choose all linear layers from the model
 )
 
 # COMMAND ----------
@@ -174,11 +206,14 @@ peft_config = LoraConfig(
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Here we will use the [`SFTTrainer` from TRL library](https://huggingface.co/docs/trl/main/en/sft_trainer) that gives a wrapper around transformers `Trainer` to easily fine-tune models on instruction based datasets using PEFT adapters. Let's first load the training arguments below.
+# MAGIC Here we will use the [`SFTTrainer` from TRL
+# library](https://huggingface.co/docs/trl/main/en/sft_trainer) that gives
+# a wrapper around transformers `Trainer` to easily fine-tune models on
+# instruction based datasets using PEFT adapters. Let's first load the
+# training arguments below.
 
 # COMMAND ----------
 
-from transformers import TrainingArguments
 
 output_dir = "/local_disk0/results"
 per_device_train_batch_size = 4
@@ -216,7 +251,6 @@ training_arguments = TrainingArguments(
 
 # COMMAND ----------
 
-from trl import SFTTrainer
 
 max_seq_length = 512
 
@@ -233,7 +267,8 @@ trainer = SFTTrainer(
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC We will also pre-process the model by upcasting the layer norms in float 32 for more stable training
+# MAGIC We will also pre-process the model by upcasting the layer norms in
+# float 32 for more stable training
 
 # COMMAND ----------
 
@@ -271,84 +306,96 @@ trainer.save_model("/local_disk0/llamav2-7b-lora-fine-tune")
 
 # COMMAND ----------
 
-import torch
-from peft import PeftModel, PeftConfig
 
 peft_model_id = "/local_disk0/llamav2-7b-lora-fine-tune"
 config = PeftConfig.from_pretrained(peft_model_id)
 
-from huggingface_hub import snapshot_download
 # Download the Llama-2-7b-hf model snapshot from huggingface
 snapshot_location = snapshot_download(repo_id=config.base_model_name_or_path)
 
 
 # COMMAND ----------
 
-import mlflow
-class LLAMAQLORA(mlflow.pyfunc.PythonModel):
-  def load_context(self, context):
-    self.tokenizer = AutoTokenizer.from_pretrained(context.artifacts['repository'])
-    self.tokenizer.pad_token = tokenizer.eos_token
-    config = PeftConfig.from_pretrained(context.artifacts['lora'])
-    base_model = AutoModelForCausalLM.from_pretrained(
-      context.artifacts['repository'], 
-      return_dict=True, 
-      load_in_4bit=True, 
-      device_map={"":0},
-      trust_remote_code=True,
-    )
-    self.model = PeftModel.from_pretrained(base_model, context.artifacts['lora'])
-  
-  def predict(self, context, model_input):
-    prompt = model_input["prompt"][0]
-    temperature = model_input.get("temperature", [1.0])[0]
-    max_tokens = model_input.get("max_tokens", [100])[0]
-    batch = self.tokenizer(prompt, padding=True, truncation=True,return_tensors='pt').to('cuda')
-    with torch.cuda.amp.autocast():
-      output_tokens = self.model.generate(
-          input_ids = batch.input_ids, 
-          max_new_tokens=max_tokens,
-          temperature=temperature,
-          top_p=0.7,
-          num_return_sequences=1,
-          do_sample=True,
-          pad_token_id=tokenizer.eos_token_id,
-          eos_token_id=tokenizer.eos_token_id,
-      )
-    generated_text = self.tokenizer.decode(output_tokens[0], skip_special_tokens=True)
 
-    return generated_text
+class LLAMAQLORA(mlflow.pyfunc.PythonModel):
+    def load_context(self, context):
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            context.artifacts['repository'])
+        self.tokenizer.pad_token = tokenizer.eos_token
+        config = PeftConfig.from_pretrained(context.artifacts['lora'])
+        base_model = AutoModelForCausalLM.from_pretrained(
+            context.artifacts['repository'],
+            return_dict=True,
+            load_in_4bit=True,
+            device_map={"": 0},
+            trust_remote_code=True,
+        )
+        self.model = PeftModel.from_pretrained(
+            base_model, context.artifacts['lora'])
+
+    def predict(self, context, model_input):
+        prompt = model_input["prompt"][0]
+        temperature = model_input.get("temperature", [1.0])[0]
+        max_tokens = model_input.get("max_tokens", [100])[0]
+        batch = self.tokenizer(
+            prompt,
+            padding=True,
+            truncation=True,
+            return_tensors='pt').to('cuda')
+        with torch.cuda.amp.autocast():
+            output_tokens = self.model.generate(
+                input_ids=batch.input_ids,
+                max_new_tokens=max_tokens,
+                temperature=temperature,
+                top_p=0.7,
+                num_return_sequences=1,
+                do_sample=True,
+                pad_token_id=tokenizer.eos_token_id,
+                eos_token_id=tokenizer.eos_token_id,
+            )
+        generated_text = self.tokenizer.decode(
+            output_tokens[0], skip_special_tokens=True)
+
+        return generated_text
 
 # COMMAND ----------
 
-from mlflow.models.signature import ModelSignature
-from mlflow.types import DataType, Schema, ColSpec
-import pandas as pd
-import mlflow
 
 # Define input and output schema
 input_schema = Schema([
-    ColSpec(DataType.string, "prompt"), 
-    ColSpec(DataType.double, "temperature"), 
+    ColSpec(DataType.string, "prompt"),
+    ColSpec(DataType.double, "temperature"),
     ColSpec(DataType.long, "max_tokens")])
 output_schema = Schema([ColSpec(DataType.string)])
 signature = ModelSignature(inputs=input_schema, outputs=output_schema)
 
 # Define input example
-input_example=pd.DataFrame({
-            "prompt":["what is ML?"], 
-            "temperature": [0.5],
-            "max_tokens": [100]})
+input_example = pd.DataFrame({
+    "prompt": ["what is ML?"],
+    "temperature": [0.5],
+    "max_tokens": [100]})
 
-with mlflow.start_run() as run:  
+with mlflow.start_run() as run:
     mlflow.pyfunc.log_model(
         "model",
         python_model=LLAMAQLORA(),
-        artifacts={'repository' : snapshot_location, "lora": peft_model_id},
-        pip_requirements=["torch", "transformers", "accelerate", "einops", "loralib", "bitsandbytes", "peft"],
-        input_example=pd.DataFrame({"prompt":["what is ML?"], "temperature": [0.5],"max_tokens": [100]}),
-        signature=signature
-    )
+        artifacts={
+            'repository': snapshot_location,
+            "lora": peft_model_id},
+        pip_requirements=[
+            "torch",
+            "transformers",
+            "accelerate",
+            "einops",
+            "loralib",
+            "bitsandbytes",
+            "peft"],
+        input_example=pd.DataFrame(
+            {
+                "prompt": ["what is ML?"],
+                "temperature": [0.5],
+                "max_tokens": [100]}),
+        signature=signature)
 
 # COMMAND ----------
 
@@ -356,9 +403,6 @@ with mlflow.start_run() as run:
 # MAGIC Run model inference with the model logged in MLFlow.
 
 # COMMAND ----------
-
-import mlflow
-import pandas as pd
 
 
 prompt = """Below is an instruction that describes a task. Write a response that appropriately completes the request.
@@ -372,10 +416,10 @@ logged_model = f"runs:/{run_id}/model"
 
 loaded_model = mlflow.pyfunc.load_model(logged_model)
 
-text_example=pd.DataFrame({
-            "prompt":[prompt], 
-            "temperature": [0.5],
-            "max_tokens": [100]})
+text_example = pd.DataFrame({
+    "prompt": [prompt],
+    "temperature": [0.5],
+    "max_tokens": [100]})
 
 # Predict on a Pandas DataFrame.
 loaded_model.predict(text_example)

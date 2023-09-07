@@ -9,7 +9,8 @@
 # MAGIC - Runtime: 13.2 GPU ML Runtime
 # MAGIC - Instance: `g5.12xlarge` (4 A10 GPUs) on AWS
 # MAGIC
-# MAGIC On Azure, we suggest using `Standard_NC48ads_A100_v4` on Azure (2 A100-80GB GPUs).
+# MAGIC On Azure, we suggest using `Standard_NC48ads_A100_v4` on Azure (2
+# A100-80GB GPUs).
 
 # COMMAND ----------
 
@@ -22,6 +23,12 @@
 
 # COMMAND ----------
 
+from mlflow.models.signature import ModelSignature
+import pandas as pd
+from mlflow.types import DataType, Schema, ColSpec
+import transformers
+import torch
+import mlflow
 dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -39,14 +46,21 @@ dbutils.library.restartPython()
 # MAGIC    --per-device-train-batch-size=16 --per-device-eval-batch-size=16 --epochs=1 --max-steps=-1
 # MAGIC   ```
 # MAGIC
-# MAGIC - The deepspeed configurations are read from `../../config/a10_config.json`, which is adapted from the ZeRO stage 3 configuration of https://huggingface.co/docs/transformers/main_classes/deepspeed. If running on A100 GPUs, please set `CONFIG_PATH=../../config/a100_config.json` in the script.
+# MAGIC - The deepspeed configurations are read from
+# `../../config/a10_config.json`, which is adapted from the ZeRO stage 3
+# configuration of
+# https://huggingface.co/docs/transformers/main_classes/deepspeed. If
+# running on A100 GPUs, please set
+# `CONFIG_PATH=../../config/a100_config.json` in the script.
 
 # COMMAND ----------
 
 # MAGIC %sh
 # MAGIC # This takes about 30 minutes to complete on g5.12xlarge.
 # MAGIC # If the progress bar fails to update, you can check that training is still running by monitoring GPU utilization.
-# MAGIC deepspeed --num_gpus=4 scripts/fine_tune_deepspeed.py --per-device-train-batch-size=16 --per-device-eval-batch-size=16 --epochs=1 --max-steps=-1
+# MAGIC deepspeed --num_gpus=4 scripts/fine_tune_deepspeed.py
+# --per-device-train-batch-size=16 --per-device-eval-batch-size=16
+# --epochs=1 --max-steps=-1
 
 # COMMAND ----------
 
@@ -64,11 +78,9 @@ dbutils.library.restartPython()
 
 # COMMAND ----------
 
-import mlflow
-import torch
-import transformers
 
 # Define PythonModel to log with mlflow.pyfunc.log_model
+
 
 class Xgen7b8k(mlflow.pyfunc.PythonModel):
     def load_context(self, context):
@@ -95,15 +107,24 @@ class Xgen7b8k(mlflow.pyfunc.PythonModel):
         This method generates prediction for a single input.
         """
         # Encode the input and generate prediction
-        encoded_input = self.tokenizer.encode(prompt, return_tensors='pt').to('cuda')
-        output = self.model.generate(encoded_input, do_sample=True, temperature=temperature, max_new_tokens=max_new_tokens)
+        encoded_input = self.tokenizer.encode(
+            prompt, return_tensors='pt').to('cuda')
+        output = self.model.generate(
+            encoded_input,
+            do_sample=True,
+            temperature=temperature,
+            max_new_tokens=max_new_tokens)
 
         # Decode the prediction to text
-        generated_text = self.tokenizer.decode(output[0], skip_special_tokens=True)
+        generated_text = self.tokenizer.decode(
+            output[0], skip_special_tokens=True)
 
         # Removing the prompt from the generated text
-        prompt_length = len(self.tokenizer.encode(prompt, return_tensors='pt')[0])
-        generated_response = self.tokenizer.decode(output[0][prompt_length:], skip_special_tokens=True)
+        prompt_length = len(
+            self.tokenizer.encode(
+                prompt, return_tensors='pt')[0])
+        generated_response = self.tokenizer.decode(
+            output[0][prompt_length:], skip_special_tokens=True)
 
         return generated_response
 
@@ -119,16 +140,16 @@ class Xgen7b8k(mlflow.pyfunc.PythonModel):
             temperature = model_input.get("temperature", [1.0])[i]
             max_new_tokens = model_input.get("max_new_tokens", [100])[i]
 
-            outputs.append(self._generate_response(prompt, temperature, max_new_tokens))
+            outputs.append(
+                self._generate_response(
+                    prompt,
+                    temperature,
+                    max_new_tokens))
 
         return outputs
 
 # COMMAND ----------
 
-from mlflow.models.signature import ModelSignature
-from mlflow.types import DataType, Schema, ColSpec
-
-import pandas as pd
 
 # Define input and output schema
 input_schema = Schema([
@@ -140,8 +161,8 @@ output_schema = Schema([ColSpec(DataType.string)])
 signature = ModelSignature(inputs=input_schema, outputs=output_schema)
 
 # Define input example
-input_example=pd.DataFrame({
-    "prompt":["what is ML?"],
+input_example = pd.DataFrame({
+    "prompt": ["what is ML?"],
     "temperature": [0.5],
     "max_new_tokens": [100],
 })
@@ -152,8 +173,14 @@ with mlflow.start_run() as run:
     mlflow.pyfunc.log_model(
         "model",
         python_model=Xgen7b8k(),
-        artifacts={"repository": "/local_disk0/output"},
-        pip_requirements=["torch", "transformers", "accelerate", "einops", "sentencepiece"],
+        artifacts={
+            "repository": "/local_disk0/output"},
+        pip_requirements=[
+            "torch",
+            "transformers",
+            "accelerate",
+            "einops",
+            "sentencepiece"],
         input_example=input_example,
         signature=signature,
     )
@@ -172,11 +199,16 @@ loaded_model = mlflow.pyfunc.load_model("runs:/" + run.info.run_id + "/model")
 # Make a prediction using the loaded model
 results = loaded_model.predict(
     {
-        "prompt": ["Write a short poem about AI taking over the world.", "What is machine learning?"],
-        "temperature": [0.8, 0.5],
-        "max_new_tokens": [100, 100],
-    }
-)
+        "prompt": [
+            "Write a short poem about AI taking over the world.",
+            "What is machine learning?"],
+        "temperature": [
+            0.8,
+            0.5],
+        "max_new_tokens": [
+            100,
+            100],
+    })
 
 for result in results:
     print(result + '\n')

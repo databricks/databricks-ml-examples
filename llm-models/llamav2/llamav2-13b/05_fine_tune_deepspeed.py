@@ -29,6 +29,15 @@
 
 # COMMAND ----------
 
+from mlflow.models.signature import ModelSignature
+from mlflow.types import DataType, Schema, ColSpec
+import accelerate
+import torch
+import mlflow
+import transformers
+import numpy as np
+import pandas as pd
+from huggingface_hub import notebook_login
 import os
 
 os.environ["HF_HOME"] = "/local_disk0/hf"
@@ -37,7 +46,6 @@ os.environ["TRANSFORMERS_CACHE"] = "/local_disk0/hf"
 
 # COMMAND ----------
 
-from huggingface_hub import notebook_login
 
 # Login to Huggingface to get access to the model
 notebook_login()
@@ -54,32 +62,32 @@ notebook_login()
 # COMMAND ----------
 
 !deepspeed \
---num_gpus=8 \
-scripts/fine_tune_deepspeed.py \
---final_model_output_path="/dbfs/llm/llama2-13b-fine-tune" \
---output_dir="/local_disk0/output" \
---dataset="mosaicml/dolly_hhrlhf" \
---model="meta-llama/Llama-2-13b-hf"  \
---tokenizer="meta-llama/Llama-2-13b-hf"  \
---deepspeed_config="../../config/a10_config.json" \
---fp16=false \
---bf16=true \
---per_device_train_batch_size=16 \
---per_device_eval_batch_size=48 \
---gradient_checkpointing=true \
---gradient_accumulation_steps=1 \
---learning_rate=5e-6 \
---adam_beta1=0.9 \
---adam_beta2=0.999 \
---adam_epsilon=1e-8 \
---lr_scheduler_type="cosine" \
---warmup_steps=100 \
---weight_decay=0.0 \
---evaluation_strategy="steps" \
---save_strategy="steps" \
---save_steps=100 \
---num_train_epochs=1 \
---max_steps=100
+    - -num_gpus = 8 \
+    scripts / fine_tune_deepspeed.py \
+    - -final_model_output_path = "/dbfs/llm/llama2-13b-fine-tune" \
+    - -output_dir = "/local_disk0/output" \
+    - -dataset = "mosaicml/dolly_hhrlhf" \
+    - -model = "meta-llama/Llama-2-13b-hf"  \
+    - -tokenizer = "meta-llama/Llama-2-13b-hf"  \
+    - -deepspeed_config = "../../config/a10_config.json" \
+    - -fp16 = false \
+    - -bf16 = true \
+    - -per_device_train_batch_size = 16 \
+    - -per_device_eval_batch_size = 48 \
+    - -gradient_checkpointing = true \
+    - -gradient_accumulation_steps = 1 \
+    - -learning_rate = 5e-6 \
+    - -adam_beta1 = 0.9 \
+    - -adam_beta2 = 0.999 \
+    - -adam_epsilon = 1e-8 \
+    - -lr_scheduler_type = "cosine" \
+    - -warmup_steps = 100 \
+    - -weight_decay = 0.0 \
+    - -evaluation_strategy = "steps" \
+    - -save_strategy = "steps" \
+    - -save_steps = 100 \
+    - -num_train_epochs = 1 \
+    - -max_steps = 100
 
 # COMMAND ----------
 
@@ -98,12 +106,6 @@ scripts/fine_tune_deepspeed.py \
 
 # COMMAND ----------
 
-import pandas as pd
-import numpy as np
-import transformers
-import mlflow
-import torch
-import accelerate
 
 class LlamaV2(mlflow.pyfunc.PythonModel):
     def load_context(self, context):
@@ -113,20 +115,20 @@ class LlamaV2(mlflow.pyfunc.PythonModel):
         """
         # Initialize tokenizer and language model
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
-          context.artifacts['repository'], padding_side="left")
+            context.artifacts['repository'], padding_side="left")
 
         config = transformers.AutoConfig.from_pretrained(
-            context.artifacts['repository'], 
+            context.artifacts['repository'],
             trust_remote_code=True
         )
-        
+
         self.model = transformers.AutoModelForCausalLM.from_pretrained(
-            context.artifacts['repository'], 
+            context.artifacts['repository'],
             config=config,
             torch_dtype=torch.bfloat16,
             device_map="auto",
             trust_remote_code=True)
-        
+
         self.model.eval()
 
     def _build_prompt(self, instruction):
@@ -152,59 +154,65 @@ class LlamaV2(mlflow.pyfunc.PythonModel):
         """
         generated_text = []
         for index, row in model_input.iterrows():
-          prompt = row["prompt"]
-          temperature = model_input.get("temperature", [1.0])[0]
-          max_new_tokens = model_input.get("max_new_tokens", [100])[0]
-          full_prompt = self._build_prompt(prompt)
-          encoded_input = self.tokenizer.encode(full_prompt, return_tensors="pt").to('cuda')
-          output = self.model.generate(encoded_input, do_sample=True, temperature=temperature, max_new_tokens=max_new_tokens)
-          prompt_length = len(encoded_input[0])
-          generated_text.append(self.tokenizer.batch_decode(output[:,prompt_length:], skip_special_tokens=True))
+            prompt = row["prompt"]
+            temperature = model_input.get("temperature", [1.0])[0]
+            max_new_tokens = model_input.get("max_new_tokens", [100])[0]
+            full_prompt = self._build_prompt(prompt)
+            encoded_input = self.tokenizer.encode(
+                full_prompt, return_tensors="pt").to('cuda')
+            output = self.model.generate(
+                encoded_input,
+                do_sample=True,
+                temperature=temperature,
+                max_new_tokens=max_new_tokens)
+            prompt_length = len(encoded_input[0])
+            generated_text.append(self.tokenizer.batch_decode(
+                output[:, prompt_length:], skip_special_tokens=True))
         return pd.Series(generated_text)
 
 # COMMAND ----------
 
-from mlflow.models.signature import ModelSignature
-from mlflow.types import DataType, Schema, ColSpec
 
 # Define input and output schema
 input_schema = Schema([
-    ColSpec(DataType.string, "prompt"), 
-    ColSpec(DataType.double, "temperature"), 
+    ColSpec(DataType.string, "prompt"),
+    ColSpec(DataType.double, "temperature"),
     ColSpec(DataType.long, "max_tokens")])
 output_schema = Schema([ColSpec(DataType.string)])
 signature = ModelSignature(inputs=input_schema, outputs=output_schema)
 
 # Define input example
-input_example=pd.DataFrame({
-            "prompt":["what is ML?"], 
-            "temperature": [0.5],
-            "max_tokens": [100]})
+input_example = pd.DataFrame({
+    "prompt": ["what is ML?"],
+    "temperature": [0.5],
+    "max_tokens": [100]})
 
 # Log the model with its details such as artifacts, pip requirements and input example
 # This may take about 1.2 minutes to complete
-with mlflow.start_run() as run:  
+with mlflow.start_run() as run:
     mlflow.pyfunc.log_model(
         "model",
         python_model=LlamaV2(),
-        artifacts={'repository' : "/dbfs/llm/llama2-13b-fine-tune/"},
-        pip_requirements=[f"torch=={torch.__version__}", 
-                          f"transformers=={transformers.__version__}", 
-                          f"accelerate=={accelerate.__version__}", "einops", "sentencepiece"],
+        artifacts={
+            'repository': "/dbfs/llm/llama2-13b-fine-tune/"},
+        pip_requirements=[
+            f"torch=={torch.__version__}",
+            f"transformers=={transformers.__version__}",
+            f"accelerate=={accelerate.__version__}",
+            "einops",
+            "sentencepiece"],
         input_example=input_example,
-        signature=signature
-    )
+        signature=signature)
 
 # COMMAND ----------
 
-import mlflow
 registered_name = "llama2_13b_fine_tuned_model"
 
 # Register model
 # It takes about 15 min to finish.
 
 result = mlflow.register_model(
-    "runs:/"+run.info.run_id+"/model",
+    "runs:/" + run.info.run_id + "/model",
     registered_name,
     await_registration_for=1000,
 )
@@ -225,8 +233,6 @@ result = mlflow.register_model(
 
 # COMMAND ----------
 
-import mlflow
-import pandas as pd
 
 registered_name = "llama2_13b_fine_tuned_model"
 logged_model = f"models:/{registered_name}/1"
@@ -235,7 +241,12 @@ logged_model = f"models:/{registered_name}/1"
 loaded_model = mlflow.pyfunc.load_model(logged_model)
 
 # Predict on a Pandas DataFrame.
-input_example=pd.DataFrame({"prompt":["what is ML?", "Name 10 colors."], "temperature": [0.5, 0.2],"max_tokens": [100, 200]})
+input_example = pd.DataFrame(
+    {
+        "prompt": [
+            "what is ML?", "Name 10 colors."], "temperature": [
+                0.5, 0.2], "max_tokens": [
+                    100, 200]})
 loaded_model.predict(input_example)
 
 # COMMAND ----------
@@ -308,7 +319,9 @@ Thank you for your attention to this matter.
 
 # COMMAND ----------
 
-input_example=pd.DataFrame({"prompt":instructions, "temperature": [0.2]*len(instructions),"max_tokens": [200]*len(instructions)})
+input_example = pd.DataFrame({"prompt": instructions,
+                              "temperature": [0.2] * len(instructions),
+                              "max_tokens": [200] * len(instructions)})
 
 # COMMAND ----------
 
@@ -317,8 +330,6 @@ result = loaded_model.predict(input_example)
 # COMMAND ----------
 
 for i in result:
-  print(i)
+    print(i)
 
 # COMMAND ----------
-
-

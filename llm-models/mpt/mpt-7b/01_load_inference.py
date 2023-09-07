@@ -5,7 +5,8 @@
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
-# MAGIC - Instance: `g5.4xlarge` on AWS, `Standard_NV36ads_A10_v5` (or `Standard_NC4as_T4_v3` and set `USE_TRITON=False`) on Azure
+# MAGIC - Instance: `g5.4xlarge` on AWS, `Standard_NV36ads_A10_v5` (or
+# `Standard_NC4as_T4_v3` and set `USE_TRITON=False`) on Azure
 
 # COMMAND ----------
 
@@ -14,89 +15,104 @@
 
 # COMMAND ----------
 
-USE_TRITON = True # TODO: Please change this to False if not using T4 GPUs
+import re
+import logging
+import time
+import torch
+import transformers
+USE_TRITON = True  # TODO: Please change this to False if not using T4 GPUs
 
 # COMMAND ----------
 
 # Skip this step if running on Databricks runtime 13.2 GPU and above.
-!wget -O /local_disk0/tmp/libcusparse-dev-11-7_11.7.3.50-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcusparse-dev-11-7_11.7.3.50-1_amd64.deb && \
-  dpkg -i /local_disk0/tmp/libcusparse-dev-11-7_11.7.3.50-1_amd64.deb && \
-  wget -O /local_disk0/tmp/libcublas-dev-11-7_11.10.1.25-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcublas-dev-11-7_11.10.1.25-1_amd64.deb && \
-  dpkg -i /local_disk0/tmp/libcublas-dev-11-7_11.10.1.25-1_amd64.deb && \
-  wget -O /local_disk0/tmp/libcusolver-dev-11-7_11.4.0.1-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcusolver-dev-11-7_11.4.0.1-1_amd64.deb && \
-  dpkg -i /local_disk0/tmp/libcusolver-dev-11-7_11.4.0.1-1_amd64.deb && \
-  wget -O /local_disk0/tmp/libcurand-dev-11-7_10.2.10.91-1_amd64.deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/libcurand-dev-11-7_10.2.10.91-1_amd64.deb && \
-  dpkg -i /local_disk0/tmp/libcurand-dev-11-7_10.2.10.91-1_amd64.deb
+!wget - O / local_disk0 / tmp / libcusparse - dev - 11 - 7_11.7.3.50 - 1_amd64.deb https: // developer.download.nvidia.com / compute / cuda / repos / ubuntu2204 / x86_64 / libcusparse - dev - 11 - 7_11.7.3.50 - 1_amd64.deb & & \
+    dpkg - i / local_disk0 / tmp / libcusparse - dev - 11 - 7_11.7.3.50 - 1_amd64.deb & & \
+    wget - O / local_disk0 / tmp / libcublas - dev - 11 - 7_11.10.1.25 - 1_amd64.deb https: // developer.download.nvidia.com / compute / cuda / repos / ubuntu2204 / x86_64 / libcublas - dev - 11 - 7_11.10.1.25 - 1_amd64.deb & & \
+    dpkg - i / local_disk0 / tmp / libcublas - dev - 11 - 7_11.10.1.25 - 1_amd64.deb & & \
+    wget - O / local_disk0 / tmp / libcusolver - dev - 11 - 7_11.4.0.1 - 1_amd64.deb https: // developer.download.nvidia.com / compute / cuda / repos / ubuntu2204 / x86_64 / libcusolver - dev - 11 - 7_11.4.0.1 - 1_amd64.deb & & \
+    dpkg - i / local_disk0 / tmp / libcusolver - dev - 11 - 7_11.4.0.1 - 1_amd64.deb & & \
+    wget - O / local_disk0 / tmp / libcurand - dev - 11 - 7_10.2.10.91 - 1_amd64.deb https: // developer.download.nvidia.com / compute / cuda / repos / ubuntu2204 / x86_64 / libcurand - dev - 11 - 7_10.2.10.91 - 1_amd64.deb & & \
+    dpkg - i / local_disk0 / tmp / libcurand - dev - 11 - 7_10.2.10.91 - 1_amd64.deb
 
 # COMMAND ----------
 
-# MAGIC %pip install xformers==0.0.20 einops==0.6.1 flash-attn==v1.0.3.post0 triton-pre-mlir@git+https://github.com/vchiley/triton.git@triton_pre_mlir#subdirectory=python
+# MAGIC %pip install xformers==0.0.20 einops==0.6.1
+# flash-attn==v1.0.3.post0
+# triton-pre-mlir@git+https://github.com/vchiley/triton.git@triton_pre_mlir#subdirectory=python
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## Inference
-# MAGIC The below snippets are adapted from [the model card of mpt-7b-instruct](https://huggingface.co/mosaicml/mpt-7b-instruct). The example in the model card should also work on Databricks with the same environment.
+# MAGIC The below snippets are adapted from [the model card of
+# mpt-7b-instruct](https://huggingface.co/mosaicml/mpt-7b-instruct). The
+# example in the model card should also work on Databricks with the same
+# environment.
 
 # COMMAND ----------
 
-import transformers
-import torch
 
-# it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of mpt-7b-instruct in https://huggingface.co/mosaicml/mpt-7b-instruct/commits/main
+# it is suggested to pin the revision commit hash and not change it for
+# reproducibility because the uploader might change the model afterwards;
+# you can find the commmit history of mpt-7b-instruct in
+# https://huggingface.co/mosaicml/mpt-7b-instruct/commits/main
 name = "mosaicml/mpt-7b-instruct"
 config = transformers.AutoConfig.from_pretrained(
-  name,
-  trust_remote_code=True
+    name,
+    trust_remote_code=True
 )
 
 config.init_device = 'cuda'
 if USE_TRITON:
-  config.attn_config['attn_impl'] = 'triton'
+    config.attn_config['attn_impl'] = 'triton'
 
 model = transformers.AutoModelForCausalLM.from_pretrained(
-  name,
-  config=config,
-  torch_dtype=torch.bfloat16,
-  trust_remote_code=True,
-  cache_dir="/local_disk0/.cache/huggingface/",
-  revision="bbe7a55d70215e16c00c1825805b81e4badb57d7"
+    name,
+    config=config,
+    torch_dtype=torch.bfloat16,
+    trust_remote_code=True,
+    cache_dir="/local_disk0/.cache/huggingface/",
+    revision="bbe7a55d70215e16c00c1825805b81e4badb57d7"
 )
 
-tokenizer = transformers.AutoTokenizer.from_pretrained("EleutherAI/gpt-neox-20b", padding_side="left")
+tokenizer = transformers.AutoTokenizer.from_pretrained(
+    "EleutherAI/gpt-neox-20b", padding_side="left")
 
 generator = transformers.pipeline("text-generation",
-                                  model=model, 
-                                  config=config, 
+                                  model=model,
+                                  config=config,
                                   tokenizer=tokenizer,
                                   torch_dtype=torch.bfloat16,
                                   device=0)
 
 # COMMAND ----------
 
+
 def generate_text(prompt, **kwargs):
-  if "max_new_tokens" not in kwargs:
-    kwargs["max_new_tokens"] = 512
-  
-  kwargs.update(
+    if "max_new_tokens" not in kwargs:
+        kwargs["max_new_tokens"] = 512
+
+    kwargs.update(
         {
             "pad_token_id": tokenizer.eos_token_id,
             "eos_token_id": tokenizer.eos_token_id,
         }
     )
-  
-  template = "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n###Instruction\n{instruction}\n\n### Response\n"
-  if isinstance(prompt, str):
-    full_prompt = template.format(instruction=prompt)
-    generated_text = generator(full_prompt, **kwargs)
-    generated_text = generated_text[0]["generated_text"]
-  elif isinstance(prompt, list):
-    full_prompts = list(map(lambda promp: template.format(instruction=promp), prompt))
-    outputs = generator(full_prompts, **kwargs)
-    generated_text = [out[0]["generated_text"] for out in outputs]
-  return generated_text
+
+    template = "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n###Instruction\n{instruction}\n\n### Response\n"
+    if isinstance(prompt, str):
+        full_prompt = template.format(instruction=prompt)
+        generated_text = generator(full_prompt, **kwargs)
+        generated_text = generated_text[0]["generated_text"]
+    elif isinstance(prompt, list):
+        full_prompts = list(
+            map(lambda promp: template.format(instruction=promp), prompt))
+        outputs = generator(full_prompts, **kwargs)
+        generated_text = [out[0]["generated_text"] for out in outputs]
+    return generated_text
 
 # COMMAND ----------
+
 
 question = "What is a large language model?"
 print(generate_text(question))
@@ -104,16 +120,16 @@ print(generate_text(question))
 # COMMAND ----------
 
 generate_kwargs = {
-  'max_new_tokens': 100,
-  'temperature': 0.2,
-  'top_p': 0.9,
-  'top_k': 50,
-  'repetition_penalty': 1.0,
-  'no_repeat_ngram_size': 0,
-  'use_cache': True,
-  'do_sample': True,
-  'eos_token_id': tokenizer.eos_token_id,
-  'pad_token_id': tokenizer.eos_token_id,
+    'max_new_tokens': 100,
+    'temperature': 0.2,
+    'top_p': 0.9,
+    'top_k': 50,
+    'repetition_penalty': 1.0,
+    'no_repeat_ngram_size': 0,
+    'use_cache': True,
+    'do_sample': True,
+    'eos_token_id': tokenizer.eos_token_id,
+    'pad_token_id': tokenizer.eos_token_id,
 }
 
 questions = ["what is ML?", "Name 10 colors."]
@@ -131,9 +147,11 @@ Although some of her works now belong to the classics of the Western tradition o
 
 Arendt’s political thought cannot, in this sense, be identified either with the liberal tradition or with the claims advanced by a number of its critics. Arendt did not conceive of politics as a means for the satisfaction of individual preferences, nor as a way to integrate individuals around a shared conception of the good. Her conception of politics is based instead on the idea of active citizenship, that is, on the value and importance of civic engagement and collective deliberation about all matters affecting the political community. If there is a tradition of thought with which Arendt can be identified, it is the classical tradition of civic republicanism originating in Aristotle and embodied in the writings of Machiavelli, Montesquieu, Jefferson, and Tocqueville. According to this tradition politics finds its authentic expression whenever citizens gather together in a public space to deliberate and decide about matters of collective concern. Political activity is valued not because it may lead to agreement or to a shared conception of the good, but because it enables each citizen to exercise his or her powers of agency, to develop the capacities for judgment and to attain by concerted action some measure of political efficacy."""
 
+
 def get_num_tokens(text):
     inputs = tokenizer(text, return_tensors="pt").input_ids.to("cuda")
     return inputs.shape[1]
+
 
 print('number of tokens for input:', get_num_tokens(long_input))
 
@@ -144,47 +162,50 @@ print(results[0])
 
 # MAGIC %md
 # MAGIC ## Measure inference speed
-# MAGIC Text generation speed is often measured with token/s, which is the average number of tokens that are generated by the model per second.
+# MAGIC Text generation speed is often measured with token/s, which is the
+# average number of tokens that are generated by the model per second.
 
 # COMMAND ----------
 
-import time
-import logging
-import re
 
 def get_gen_text_throughput(prompt, **kwargs):
-  if "max_new_tokens" not in kwargs:
-    kwargs["max_new_tokens"] = 512
-  
-  kwargs.update(
+    if "max_new_tokens" not in kwargs:
+        kwargs["max_new_tokens"] = 512
+
+    kwargs.update(
         {
             "pad_token_id": tokenizer.eos_token_id,
             "eos_token_id": tokenizer.eos_token_id,
-            "return_tensors": True,  # make the pipeline return token ids instead of decoded text to get the number of generated tokens
+            # make the pipeline return token ids instead of decoded text to get
+            # the number of generated tokens
+            "return_tensors": True,
         }
     )
-  
-  template = "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n###Instruction\n{instruction}\n\n### Response\n"
-  full_prompt = template.format(instruction=prompt)
-  # measure the time it takes for text generation
-  start = time.time()
-  generated_text = generator(full_prompt, **kwargs)
-  duration = time.time() - start
-  
-  num_input_tokens = get_num_tokens(full_prompt)
 
-  # get the number of generated tokens
-  n_tokens = len(generated_text[0]["generated_token_ids"])
-  
-  # show the generated text
-  generated_text = tokenizer.decode(generated_text[0]["generated_token_ids"],
-                                    skip_special_tokens=True)
+    template = "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n###Instruction\n{instruction}\n\n### Response\n"
+    full_prompt = template.format(instruction=prompt)
+    # measure the time it takes for text generation
+    start = time.time()
+    generated_text = generator(full_prompt, **kwargs)
+    duration = time.time() - start
 
-  return ((n_tokens - num_input_tokens) / duration, (n_tokens - num_input_tokens), generated_text)
+    num_input_tokens = get_num_tokens(full_prompt)
+
+    # get the number of generated tokens
+    n_tokens = len(generated_text[0]["generated_token_ids"])
+
+    # show the generated text
+    generated_text = tokenizer.decode(generated_text[0]["generated_token_ids"],
+                                      skip_special_tokens=True)
+
+    return ((n_tokens - num_input_tokens) / duration,
+            (n_tokens - num_input_tokens), generated_text)
 
 # COMMAND ----------
 
-throughput, n_tokens, result = get_gen_text_throughput("What is ML?", max_new_tokens=200)
+
+throughput, n_tokens, result = get_gen_text_throughput(
+    "What is ML?", max_new_tokens=200)
 
 print(f"{throughput} tokens/sec, {n_tokens} tokens (not including prompt)")
 print(result)

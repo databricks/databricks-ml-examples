@@ -11,7 +11,11 @@
 # MAGIC GPU instances that have at least 2 A10 GPUs would be enough for inference on single input (batch inference requires slightly more memory).
 # MAGIC
 # MAGIC Requirements:
-# MAGIC - To get the access of the model on HuggingFace, please visit the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads) and accept our license terms and acceptable use policy before submitting this form. Requests will be processed in 1-2 days.
+# MAGIC - To get the access of the model on HuggingFace, please visit the
+# [Meta
+# website](https://ai.meta.com/resources/models-and-libraries/llama-downloads)
+# and accept our license terms and acceptable use policy before submitting
+# this form. Requests will be processed in 1-2 days.
 
 # COMMAND ----------
 
@@ -20,6 +24,14 @@
 
 # COMMAND ----------
 
+from mlflow.models.signature import ModelSignature
+from mlflow import MlflowClient
+import pandas as pd
+from mlflow.types import DataType, Schema, ColSpec
+import transformers
+import torch
+import mlflow
+from huggingface_hub import snapshot_download
 from huggingface_hub import notebook_login
 
 # Login to Huggingface to get access to the model
@@ -32,23 +44,27 @@ notebook_login()
 
 # COMMAND ----------
 
-# it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of llamav2-7b-chat in https://huggingface.co/facebook/llamav2-7b-chat/commits/main
+# it is suggested to pin the revision commit hash and not change it for
+# reproducibility because the uploader might change the model afterwards;
+# you can find the commmit history of llamav2-7b-chat in
+# https://huggingface.co/facebook/llamav2-7b-chat/commits/main
 model = "meta-llama/Llama-2-13b-chat-hf"
 revision = "4021a3b5608262f386b2bee683b6348e9228325d"
 
 
-from huggingface_hub import snapshot_download
-
-# If the model has been downloaded in previous cells, this will not repetitively download large model files, but only the remaining files in the repo
-snapshot_location = snapshot_download(repo_id=model, revision=revision, ignore_patterns="*.safetensors")
+# If the model has been downloaded in previous cells, this will not
+# repetitively download large model files, but only the remaining files in
+# the repo
+snapshot_location = snapshot_download(
+    repo_id=model,
+    revision=revision,
+    ignore_patterns="*.safetensors")
 
 # COMMAND ----------
 
-import mlflow
-import torch
-import transformers
 
 # Define PythonModel to log with mlflow.pyfunc.log_model
+
 
 class LLaMA2(mlflow.pyfunc.PythonModel):
     def load_context(self, context):
@@ -60,9 +76,9 @@ class LLaMA2(mlflow.pyfunc.PythonModel):
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
             context.artifacts['repository'], padding_side="left")
         self.model = transformers.AutoModelForCausalLM.from_pretrained(
-            context.artifacts['repository'], 
+            context.artifacts['repository'],
             torch_dtype=torch.bfloat16,
-            low_cpu_mem_usage=True, 
+            low_cpu_mem_usage=True,
             trust_remote_code=True,
             device_map="auto",
             pad_token_id=self.tokenizer.eos_token_id)
@@ -93,18 +109,27 @@ class LLaMA2(mlflow.pyfunc.PythonModel):
         prompt = self._build_prompt(prompt)
 
         # Encode the input and generate prediction
-        encoded_input = self.tokenizer.encode(prompt, return_tensors='pt').to('cuda')
-        output = self.model.generate(encoded_input, do_sample=True, temperature=temperature, max_new_tokens=max_new_tokens)
-    
+        encoded_input = self.tokenizer.encode(
+            prompt, return_tensors='pt').to('cuda')
+        output = self.model.generate(
+            encoded_input,
+            do_sample=True,
+            temperature=temperature,
+            max_new_tokens=max_new_tokens)
+
         # Decode the prediction to text
-        generated_text = self.tokenizer.decode(output[0], skip_special_tokens=True)
+        generated_text = self.tokenizer.decode(
+            output[0], skip_special_tokens=True)
 
         # Removing the prompt from the generated text
-        prompt_length = len(self.tokenizer.encode(prompt, return_tensors='pt')[0])
-        generated_response = self.tokenizer.decode(output[0][prompt_length:], skip_special_tokens=True)
+        prompt_length = len(
+            self.tokenizer.encode(
+                prompt, return_tensors='pt')[0])
+        generated_response = self.tokenizer.decode(
+            output[0][prompt_length:], skip_special_tokens=True)
 
         return generated_response
-      
+
     def predict(self, context, model_input):
         """
         This method generates prediction for the given input.
@@ -113,42 +138,42 @@ class LLaMA2(mlflow.pyfunc.PythonModel):
         outputs = []
 
         for i in range(len(model_input)):
-          prompt = model_input["prompt"][i]
-          temperature = model_input.get("temperature", [1.0])[i]
-          max_new_tokens = model_input.get("max_new_tokens", [100])[i]
+            prompt = model_input["prompt"][i]
+            temperature = model_input.get("temperature", [1.0])[i]
+            max_new_tokens = model_input.get("max_new_tokens", [100])[i]
 
-          outputs.append(self._generate_response(prompt, temperature, max_new_tokens))
-      
+            outputs.append(
+                self._generate_response(
+                    prompt,
+                    temperature,
+                    max_new_tokens))
+
         return outputs
 
 # COMMAND ----------
 
-from mlflow.models.signature import ModelSignature
-from mlflow.types import DataType, Schema, ColSpec
-
-import pandas as pd
 
 # Define input and output schema
 input_schema = Schema([
-    ColSpec(DataType.string, "prompt"), 
-    ColSpec(DataType.double, "temperature"), 
+    ColSpec(DataType.string, "prompt"),
+    ColSpec(DataType.double, "temperature"),
     ColSpec(DataType.long, "max_new_tokens")])
 output_schema = Schema([ColSpec(DataType.string)])
 signature = ModelSignature(inputs=input_schema, outputs=output_schema)
 
 # Define input example
-input_example=pd.DataFrame({
-            "prompt":["what is ML?"], 
-            "temperature": [0.5],
-            "max_new_tokens": [100]})
+input_example = pd.DataFrame({
+    "prompt": ["what is ML?"],
+    "temperature": [0.5],
+    "max_new_tokens": [100]})
 
 # Log the model with its details such as artifacts, pip requirements and input example
 # This may take about 2.3 minutes to complete
-with mlflow.start_run() as run:  
+with mlflow.start_run() as run:
     mlflow.pyfunc.log_model(
         "model",
         python_model=LLaMA2(),
-        artifacts={'repository' : snapshot_location},
+        artifacts={'repository': snapshot_location},
         pip_requirements=["torch", "transformers", "accelerate"],
         input_example=input_example,
         signature=signature,
@@ -166,7 +191,6 @@ with mlflow.start_run() as run:
 # COMMAND ----------
 
 # Configure MLflow Python client to register model in Unity Catalog
-import mlflow
 mlflow.set_registry_uri("databricks-uc")
 
 # COMMAND ----------
@@ -174,21 +198,26 @@ mlflow.set_registry_uri("databricks-uc")
 # Register model to Unity Catalog
 # This may take 2.2 minutes to complete
 
-registered_name = "models.default.llama2_13b_chat_model" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
+# Note that the UC model name follows the pattern
+# <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog,
+# schema, and registered model name
+registered_name = "models.default.llama2_13b_chat_model"
 
 
 result = mlflow.register_model(
-    "runs:/"+run.info.run_id+"/model",
+    "runs:/" + run.info.run_id + "/model",
     registered_name,
 )
 
 # COMMAND ----------
 
-from mlflow import MlflowClient
 client = MlflowClient()
 
 # Choose the right model version registered in the above cell.
-client.set_registered_model_alias(name=registered_name, alias="Champion", version=result.version)
+client.set_registered_model_alias(
+    name=registered_name,
+    alias="Champion",
+    version=result.version)
 
 # COMMAND ----------
 
@@ -197,8 +226,6 @@ client.set_registered_model_alias(name=registered_name, alias="Champion", versio
 
 # COMMAND ----------
 
-import mlflow
-import pandas as pd
 
 loaded_model = mlflow.pyfunc.load_model(f"models:/{registered_name}@Champion")
 
