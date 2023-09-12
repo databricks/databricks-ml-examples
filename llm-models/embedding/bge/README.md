@@ -52,9 +52,9 @@ table th:nth-of-type(4) {
 </style>
 -->
 
-|                      **File**                       |                                         **Description**                                          |    **Model Used**    | **GPU Minimum Requirement** |
-|:---------------------------------------------------:|:------------------------------------------------------------------------------------------------:|:--------------------:|:---------------------------:|
-|                 `01_load_inference`                 |    Environment setup and suggested configurations when inferencing BGE models on Databricks.     | `Llama-2-7b-chat-hf` |         1xA10-24GB          |
-|            `02_mlflow_logging_inference`            | Save, register, and load BGE models with MLFlow, and create a Databricks model serving endpoint. | `Llama-2-7b-chat-hf` |         1xA10-24GB          |
-|              `03_build_document_index`              |                        Build a vector store with faiss using BGE models.                         | `Llama-2-7b-chat-hf` |         1xA10-24GB          |
-|              `04_fine_tune_embedding`               |                                       Fine-tune BGE models                                       |         N/A          |             N/A             |
+|                      **File**                       |                                         **Description**                                          | **GPU Minimum Requirement** |
+|:---------------------------------------------------:|:------------------------------------------------------------------------------------------------:|:---------------------------:|
+|                 `01_load_inference`                 |    Environment setup and suggested configurations when inferencing BGE models on Databricks.     |         1xA10-24GB          |
+|            `02_mlflow_logging_inference`            | Save, register, and load BGE models with MLFlow, and create a Databricks model serving endpoint. |         1xA10-24GB          |
+|              `03_build_document_index`              |                        Build a vector store with faiss using BGE models.                         |         1xA10-24GB          |
+|              `04_fine_tune_embedding`               |                                       Fine-tune BGE models                                       |             N/A             |

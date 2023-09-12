@@ -3,14 +3,13 @@
 # MAGIC
 # MAGIC # Serving MPT-30B-instruct with a cluster driver proxy app
 # MAGIC
-# MAGIC This notebook enables you to run MPT-7B-Instruct on a Databricks cluster and expose the model to LangChain via [driver proxy](https://python.langchain.com/en/latest/modules/models/llms/integrations/databricks.html#wrapping-a-cluster-driver-proxy-app).
+# MAGIC This notebook enables you to run MPT-30B-Instruct on a Databricks cluster and expose the model to LangChain via [driver proxy](https://python.langchain.com/en/latest/modules/models/llms/integrations/databricks.html#wrapping-a-cluster-driver-proxy-app).
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
-# MAGIC - Instance: `g5.4xlarge` on AWS
+# MAGIC - Instance: `g5.4xlarge` on AWS or `Standard_NC24ads_A100_v4` on Azure
 # MAGIC
-# MAGIC GPU instances that have at least 16GB GPU memory would be enough for inference on single input. On Azure, it is possible to use `Standard_NC6s_v3` or `Standard_NC4as_T4_v3`.
-
+# MAGIC GPU instances that have at least 2 A10 GPUs would be enough for inference on single input (batch inference requires slightly more memory).
 # COMMAND ----------
 
 # Skip this step if running on Databricks runtime 13.2 GPU and above.
