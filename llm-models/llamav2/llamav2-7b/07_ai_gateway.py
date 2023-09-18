@@ -20,7 +20,7 @@
 
 # TODO: Please change endpoint_name to your Databricks serving endpoint name if it's different
 # The below assumes you've create an endpoint "llama2-7b-chat" according to 02_mlflow_logging_inference
-endpoint_name = "llama2-7b-chat"
+endpoint_name = "optimized-mpt-7b-example"
 gateway_route_name = f"{endpoint_name}_completion"
 
 # COMMAND ----------
@@ -66,7 +66,11 @@ mlflow.gateway.create_route(
 
 response = mlflow.gateway.query(
     route=gateway_route_name,
-    data={"prompt": "What is MLflow?", "temperature": 0.3, "max_new_tokens": 200}
+    data={"prompt": "What is MLflow?", "temperature": 0.3, "max_tokens": 200}
 )
 
 print(response['candidates'][0]['text'])
+
+# COMMAND ----------
+
+

@@ -109,7 +109,7 @@ def gen_text_for_serving(messages, **kwargs):
     # Get the input params for the standard parameters for chat routes: https://mlflow.org/docs/latest/gateway/index.html#chat
     kwargs.setdefault("max_tokens", 512)
     kwargs.setdefault("candidate_count", 1)
-    kwargs.setdefault("temperature", 0.0)
+    kwargs.setdefault("temperature", 0.1)
     kwargs.setdefault("stop", [])
 
     encoded_input = tokenizer.encode(prompt, return_tensors="pt").to("cuda")
@@ -145,7 +145,12 @@ def gen_text_for_serving(messages, **kwargs):
             output[i][prompt_length:], skip_special_tokens=True
         )
 
-        response_messages.append(generated_response)
+        response_messages.append({
+          "message": {
+                "role": "assistant",
+                "content": generated_response,
+            }
+        })
 
     return {"candidates": response_messages}
 
@@ -158,7 +163,6 @@ print(
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": "What is ML?"},
         ],
-        stop=["\n"],
     )
 )
 
@@ -196,38 +200,15 @@ port = {port}
 
 # MAGIC %md
 # MAGIC Keep `app.run` running, and it could be used with Langchain ([documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/databricks.html#wrapping-a-cluster-driver-proxy-app)), or by call the serving endpoint with:
-# MAGIC ```python
-# MAGIC import requests
-# MAGIC import json
 # MAGIC
-# MAGIC def request_llamav2_7b(prompt, temperature=1.0, max_new_tokens=1024):
-# MAGIC   token = ... # TODO: fill in with your Databricks personal access token that can access the cluster that runs this driver proxy notebook
-# MAGIC   url = ...   # TODO: fill in with the driver_proxy_api output above
-# MAGIC   
-# MAGIC   headers = {
-# MAGIC       "Content-Type": "application/json",
-# MAGIC       "Authentication": f"Bearer {token}"
-# MAGIC   }
-# MAGIC   data = {
-# MAGIC     "prompt": prompt,
-# MAGIC     "temperature": temperature,
-# MAGIC     "max_new_tokens": max_new_tokens,
-# MAGIC   }
-# MAGIC
-# MAGIC   response = requests.post(url, headers=headers, data=json.dumps(data))
-# MAGIC   return response.text
-# MAGIC
-# MAGIC
-# MAGIC request_llamav2_7b("What is databricks?")
-# MAGIC ```
 # MAGIC Or you could try using ai_query([doucmentation](https://docs.databricks.com/sql/language-manual/functions/ai_query.html)) to call this driver proxy from Databricks SQL with:
-# MAGIC ```
-# MAGIC SELECT ai_query('cluster_ud:port', -- TODO: fill in the cluster_id and port number from output above.  
-# MAGIC   named_struct('prompt', 'What is databricks?', 'temperature', CAST(0.1 AS DOUble)),
-# MAGIC   'returnType', 'STRING')
-# MAGIC ```
+# MAGIC
 # MAGIC Note: The [AI Functions](https://docs.databricks.com/large-language-models/ai-functions.html) is in the public preview, to enable the feature for your workspace, please submit this [form](https://docs.google.com/forms/d/e/1FAIpQLScVyh5eRioqGwuUVxj9JOiKBAo0-FWi7L3f4QWsKeyldqEw8w/viewform).
 
 # COMMAND ----------
 
 app.run(host="0.0.0.0", port=port, debug=True, use_reloader=False)
+
+# COMMAND ----------
+
+

@@ -314,7 +314,7 @@ loaded_model.predict(
 # COMMAND ----------
 
 # Provide a name to the serving endpoint
-endpoint_name = 'llama2-7b-chat'
+endpoint_name = 'llama2-7b-chat-completion'
 
 # COMMAND ----------
 
