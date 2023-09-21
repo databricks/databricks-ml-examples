@@ -168,7 +168,7 @@ mlflow.set_registry_uri("databricks-uc")
 # Register model to Unity Catalog
 # This may take 2.2 minutes to complete
 
-registered_name = "models.default.llamav2_7b_chat_model" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
+registered_name = "models.default.llama2_7b_completions" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
 
 
 result = mlflow.register_model(
@@ -216,7 +216,7 @@ loaded_model.predict(
 # COMMAND ----------
 
 # Provide a name to the serving endpoint
-endpoint_name = 'llama2-7b-chat'
+endpoint_name = 'llama2-7b-completions'
 
 # COMMAND ----------
 
