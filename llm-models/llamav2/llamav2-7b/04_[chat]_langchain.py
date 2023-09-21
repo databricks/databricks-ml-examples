@@ -4,8 +4,8 @@
 # MAGIC
 # MAGIC This example notebook shows how to wrap Databricks endpoints as LLMs in LangChain. It supports two endpoint types:
 # MAGIC
-# MAGIC - Serving endpoint, recommended for production and development. See `02_mlflow_logging_inference` for how to create one.
-# MAGIC - Cluster driver proxy app, recommended for iteractive development. See `03_serve_driver_proxy` for how to create one.
+# MAGIC - Serving endpoint, recommended for production and development. See `02_[chat]_mlflow_logging_inference` for how to create one.
+# MAGIC - Cluster driver proxy app, recommended for iteractive development. See `03_[chat]_serve_driver_proxy` for how to create one.
 # MAGIC
 # MAGIC Environment tested:
 # MAGIC - MLR: 13.2 ML
@@ -71,7 +71,7 @@ print(llm("How to master Python in 3 days?"))
 
 # COMMAND ----------
 
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Optional
 
 from langchain.callbacks.manager import (
     AsyncCallbackManagerForLLMRun,
