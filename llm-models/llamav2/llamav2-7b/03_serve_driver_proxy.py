@@ -34,7 +34,7 @@ import torch
 
 # it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of llamav2-7b-chat in https://huggingface.co/meta-llama/Llama-2-7b-chat-hf/commits/main
 model = "meta-llama/Llama-2-7b-chat-hf"
-revision = "0ede8dd71e923db6258295621d817ca8714516d4"
+revision = "08751db2aca9bf2f7f80d2e516117a53d7450235"
 
 tokenizer = AutoTokenizer.from_pretrained(model)
 pipeline = transformers.pipeline(
