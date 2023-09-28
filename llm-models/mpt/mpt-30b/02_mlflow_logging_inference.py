@@ -116,8 +116,8 @@ from mlflow.types import DataType, Schema, ColSpec
 # Define input and output schema
 input_schema = Schema([
     ColSpec(DataType.string, "prompt"), 
-    ColSpec(DataType.double, "temperature"), 
-    ColSpec(DataType.long, "max_tokens")])
+    ColSpec(DataType.double, "temperature", optional=True), 
+    ColSpec(DataType.long, "max_tokens", optional=True)])
 output_schema = Schema([ColSpec(DataType.string)])
 signature = ModelSignature(inputs=input_schema, outputs=output_schema)
 

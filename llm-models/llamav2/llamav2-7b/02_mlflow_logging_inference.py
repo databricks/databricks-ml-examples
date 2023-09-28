@@ -125,8 +125,8 @@ import pandas as pd
 # Define input and output schema
 input_schema = Schema([
     ColSpec(DataType.string, "prompt"), 
-    ColSpec(DataType.double, "temperature"), 
-    ColSpec(DataType.long, "max_new_tokens")])
+    ColSpec(DataType.double, "temperature", optional=True), 
+    ColSpec(DataType.long, "max_new_tokens", optional=True)])
 output_schema = Schema([ColSpec(DataType.string)])
 signature = ModelSignature(inputs=input_schema, outputs=output_schema)
 

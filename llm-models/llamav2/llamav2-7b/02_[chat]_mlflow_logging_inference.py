@@ -43,6 +43,7 @@ snapshot_location = snapshot_download(
 
 # COMMAND ----------
 
+import json
 import mlflow
 import torch
 import transformers
@@ -95,6 +96,13 @@ class Llama2Chat(mlflow.pyfunc.PythonModel):
         Assemble the message list to one prompt.
         message: A list of messages in a conversation from which to a new message (chat completion). Each chat message is a string dictionary containing `role` and `content`.
         """
+        if isinstance(messages, str):
+          messages= json.loads(messages)
+
+        try:
+          test = messages[0]["role"]
+        except Exception as e:
+          raise Exception(f"Input {messages} contains error: {e}") 
 
         if messages[0]["role"] == "system":
             prompt = "<s>" + self.B_SYS + messages[0]["content"] + self.E_SYS
@@ -198,10 +206,10 @@ import pandas as pd
 input_schema = Schema(
     [
         ColSpec(DataType.string, "messages"),
-        ColSpec(DataType.long, "candidate_count"),
-        ColSpec(DataType.double, "temperature"),
-        ColSpec(DataType.long, "max_tokens"),
-        ColSpec(DataType.string, "stop"),
+        ColSpec(DataType.long, "candidate_count", optional=True),
+        ColSpec(DataType.double, "temperature", optional=True),
+        ColSpec(DataType.long, "max_tokens", optional=True),
+        ColSpec(DataType.string, "stop", optional=True),
     ]
 )
 output_schema = Schema([ColSpec(DataType.string)])
@@ -229,7 +237,8 @@ with mlflow.start_run() as run:
     mlflow.pyfunc.log_model(
         "model",
         python_model=Llama2Chat(),
-        artifacts={"repository": snapshot_location},
+        artifacts={"repository":
+           snapshot_location},
         pip_requirements=["torch", "transformers", "accelerate", "sentencepiece"],
         input_example=input_example,
         signature=signature,
@@ -300,6 +309,19 @@ loaded_model.predict(
         "temperature": [0.5],
         "max_tokens": [100],
         "stop": [["\n"]],
+    }
+)
+
+# COMMAND ----------
+
+loaded_model.predict(
+    {
+        "messages": [
+            [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "What is ML?"},
+            ]
+        ],
     }
 )
 
