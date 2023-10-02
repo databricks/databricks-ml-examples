@@ -25,17 +25,88 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install xformers==0.0.20 einops==0.6.1 flash-attn==v1.0.3.post0 triton-pre-mlir@git+https://github.com/vchiley/triton.git@triton_pre_mlir#subdirectory=python
+# MAGIC %pip install transformers==4.33.0 einops==0.6.1 accelerate==0.20.3 mlflow==2.6.0
+# MAGIC dbutils.library.restartPython()
+
+# COMMAND ----------
+
+# %pip install xformers==0.0.20 einops==0.6.1 flash-attn==v1.0.3.post0 triton-pre-mlir@git+https://github.com/vchiley/triton.git@triton_pre_mlir#subdirectory=python
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Log the model to MLFlow
+# MAGIC ## Log the model to MLFlow
+
+# COMMAND ----------
+
+# MAGIC %md Downlaod the model from huggingface
+
+# COMMAND ----------
+
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+
+# If the model has been downloaded in previous cells, this will not repetitively download large model files, but only the remaining files in the repo
+model = AutoModelForCausalLM.from_pretrained('mosaicml/mpt-7b-instruct', low_cpu_mem_usage=True, cache_dir="/local_disk0/.cache/huggingface/", torch_dtype=torch.bfloat16)
+tokenizer = AutoTokenizer.from_pretrained("mosaicml/mpt-7b-instruct")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Define a customized PythonModel to log into MLFlow.
+# MAGIC Log the model into MLFlow using `mlflow.transformers` flavor.
+# MAGIC
+# MAGIC To enable optimized serving, when logging the model, include the extra metadata dictionary when calling `mlflow.transformers.log_model` as shown below:
+# MAGIC
+# MAGIC ```
+# MAGIC metadata = {"task": "llm/v1/completions"}
+# MAGIC ```
+
+# COMMAND ----------
+
+import mlflow
+from mlflow.models import infer_signature
+import numpy as np
+
+example_prompt="Below is an instruction that describes a task. Write a response that appropriately completes the request.\n### Instruction:\nWhat is Apache Spark?\n### Response:\n"
+example_params={"max_length": 100, "temperature": 0.8, "do_sample": True}
+signature_with_params = infer_signature(
+    model_input=example_prompt,
+    params=example_params,
+)
+
+# Log the model and its pip requirements and input example
+# This may take about 5 minutes to complete
+with mlflow.start_run():
+    components = {
+        "model": model,
+        "tokenizer": tokenizer,
+    }
+    mlflow.transformers.log_model(
+        transformers_model=components,
+        artifact_path="mpt",
+        input_example=example_prompt,
+        metadata = {"task": "llm/v1/completions"},
+    )
+
+# COMMAND ----------
+
+# Register model in MLflow Model Registry
+# This may take about 6 minutes to complete
+result = mlflow.register_model(
+    "runs:/"+run.info.run_id+"/model",
+    name="mpt-7b-instruct",
+    await_registration_for=1000,
+)
+
+# COMMAND ----------
+
+import mlflow
+import pandas as pd
+loaded_model = mlflow.pyfunc.load_model(f"models:/mpt-7b-instruct/latest")
+
+# Make a prediction using the loaded model
+input_example=pd.DataFrame({"prompt":["what is ML?", "Name 10 colors."], "temperature": [0.5, 0.2],"max_tokens": [100, 200]})
+print(loaded_model.predict(input_example))
 
 # COMMAND ----------
 
@@ -111,10 +182,10 @@ class MPT(mlflow.pyfunc.PythonModel):
 
 # COMMAND ----------
 
-from huggingface_hub import snapshot_download
+# from huggingface_hub import snapshot_download
 
-# If the model has been downloaded in previous cells, this will not repetitively download large model files, but only the remaining files in the repo
-model_location = snapshot_download(repo_id="mosaicml/mpt-7b-instruct", cache_dir="/local_disk0/.cache/huggingface/", revision="bbe7a55d70215e16c00c1825805b81e4badb57d7")
+# # If the model has been downloaded in previous cells, this will not repetitively download large model files, but only the remaining files in the repo
+# model_location = snapshot_download(repo_id="mosaicml/mpt-7b-instruct", cache_dir="/local_disk0/.cache/huggingface/", revision="bbe7a55d70215e16c00c1825805b81e4badb57d7")
 
 # COMMAND ----------
 
@@ -136,7 +207,7 @@ signature = ModelSignature(inputs=input_schema, outputs=output_schema)
 
 # Define input example
 input_example=pd.DataFrame({
-            "prompt":["what is ML?"], 
+            "prompt":["what is ML?"], \
             "temperature": [0.5],
             "max_tokens": [100]})
 
@@ -157,7 +228,7 @@ with mlflow.start_run() as run:
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Register the model
+# MAGIC ## Register the model
 
 # COMMAND ----------
 
@@ -172,7 +243,7 @@ result = mlflow.register_model(
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ### Load the model from model registry
+# MAGIC ## Load the model from model registry
 # MAGIC Assume that the below code is run separately or after the memory cache is cleared.
 # MAGIC You may need to cleanup the GPU memory.
 
@@ -189,7 +260,7 @@ print(loaded_model.predict(input_example))
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Create Model Serving Endpoint
+# MAGIC ## Create Optimized Model Serving Endpoint
 # MAGIC Once the model is registered, we can use API to create a Databricks GPU Model Serving Endpoint that serves the MPT-7B-Instruct model.
 # MAGIC
 # MAGIC Note that the below deployment requires GPU model serving. For more information on GPU model serving, contact the Databricks team or sign up [here](https://docs.google.com/forms/d/1-GWIlfjlIaclqDz6BPODI2j1Xg4f4WbFvBXyebBpN-Y/edit).
@@ -197,7 +268,7 @@ print(loaded_model.predict(input_example))
 # COMMAND ----------
 
 # Provide a name to the serving endpoint
-endpoint_name = 'mpt-7b-instruct-example'
+endpoint_name = 'optimized-mpt-7b-instruct-example'
 
 # COMMAND ----------
 
@@ -220,7 +291,7 @@ endpoint_config = {
       "name": f'{model_version.name.replace(".", "_")}_{model_version.version}',
       "model_name": model_version.name,
       "model_version": model_version.version,
-      "workload_type": "GPU_MEDIUM",
+      "workload_type": "GPU_MEDIUM",  # TODO: need GPU_LARGE on Azure since no GPU_MEDIUM on azure yet
       "workload_size": "Small",
       "scale_to_zero_enabled": "False"
     }]
