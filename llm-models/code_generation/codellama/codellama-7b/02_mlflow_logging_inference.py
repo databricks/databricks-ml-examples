@@ -13,7 +13,8 @@
 # COMMAND ----------
 
 # MAGIC %pip install --upgrade "mlflow-skinny[databricks]>=2.4.1"
-# MAGIC %pip install -U git+https://github.com/huggingface/transformers.git
+# MAGIC %pip install -U transformers==4.33.3
+# MAGIC %pip install -U flash-attn==2.3.0
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
