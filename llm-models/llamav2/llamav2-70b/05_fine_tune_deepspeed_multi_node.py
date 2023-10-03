@@ -340,11 +340,6 @@ dist.run(fine_tune_llama2, epochs=1, max_steps=1)
 
 # COMMAND ----------
 
-# MAGIC %sh
-# MAGIC rm -r /dbfs/llama-2-fine-tune/output
-
-# COMMAND ----------
-
 # MAGIC %md
 # MAGIC After run() completes, you can load the model from the local output path (/dbfs/llama-2-fine-tune/output in this notebook).
 
