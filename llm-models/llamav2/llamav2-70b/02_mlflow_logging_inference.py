@@ -1,12 +1,12 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Manage Llama 2 7B chat model with MLFlow on Databricks
+# MAGIC # Manage Llama-2-70b-chat-hf model with MLFlow on Databricks
 # MAGIC
-# MAGIC [Llama 2](https://huggingface.co/meta-llama) is a collection of pretrained and fine-tuned generative text models ranging in scale from 7 billion to 70 billion parameters. It is trained with 2T tokens and supports context length window upto 4K tokens. [Llama-2-7b-chat-hf](https://huggingface.co/meta-llama/Llama-2-7b-chat-hf) is the 7B fine-tuned model, optimized for dialogue use cases and converted for the Hugging Face Transformers format.
+# MAGIC [Llama 2](https://huggingface.co/meta-llama) is a collection of pretrained and fine-tuned generative text models ranging in scale from 7 billion to 70 billion parameters. It is trained with 2T tokens and supports context length window upto 4K tokens. [Llama-2-70b-chat-hf](https://huggingface.co/meta-llama/Llama-2-70b-chat-hf) is the 70B fine-tuned model, optimized for dialogue use cases and converted for the Hugging Face Transformers format.
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.2 GPU ML Runtime
-# MAGIC - Instance: `g5.4xlarge` on AWS, `Standard_NV36ads_A10_v5` on Azure
+# MAGIC - Instance: `Standard_NC48ads_A100_v4` on Azure, `p4d.24xlarge` on AWS
 # MAGIC
 # MAGIC Requirements:
 # MAGIC - To get the access of the model on HuggingFace, please visit the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads) and accept our license terms and acceptable use policy before submitting this form. Requests will be processed in 1-2 days.
@@ -14,7 +14,16 @@
 # COMMAND ----------
 
 # MAGIC %pip install --upgrade "mlflow-skinny[databricks]>=2.4.1"
+# MAGIC %pip install --upgrade "transformers>=4.31.0" # Llama-2-70B uses Grouped Query Attention that requires transformers>=4.31.0
 # MAGIC dbutils.library.restartPython()
+
+# COMMAND ----------
+
+import os
+
+os.environ["HF_HOME"] = "/local_disk0/hf"
+os.environ["HF_DATASETS_CACHE"] = "/local_disk0/hf"
+os.environ["TRANSFORMERS_CACHE"] = "/local_disk0/hf"
 
 # COMMAND ----------
 
@@ -30,9 +39,9 @@ notebook_login()
 
 # COMMAND ----------
 
-# it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of llamav2-7b-chat in https://huggingface.co/meta-llama/Llama-2-7b-chat-hf/commits/main
-model = "meta-llama/Llama-2-7b-chat-hf"
-revision = "08751db2aca9bf2f7f80d2e516117a53d7450235"
+# it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of Llama-2-70b-chat-hf in https://huggingface.co/meta-llama/Llama-2-70b-chat-hf/commits/main
+model = "meta-llama/Llama-2-70b-chat-hf"
+revision = "e6152b720bd3cd67afc66e36d06893a0e1f84b48"
 
 from huggingface_hub import snapshot_download
 
@@ -168,7 +177,7 @@ mlflow.set_registry_uri("databricks-uc")
 # Register model to Unity Catalog
 # This may take 2.2 minutes to complete
 
-registered_name = "models.default.llama2_7b_completions" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
+registered_name = "models.default.llamav2_70b_chat_model" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
 
 
 result = mlflow.register_model(
@@ -192,6 +201,13 @@ client.set_registered_model_alias(name=registered_name, alias="Champion", versio
 # COMMAND ----------
 
 import mlflow
+mlflow.set_registry_uri("databricks-uc")
+
+registered_name = "models.default.llamav2_70b_chat_model"
+
+# COMMAND ----------
+
+import mlflow
 import pandas as pd
 
 loaded_model = mlflow.pyfunc.load_model(f"models:/{registered_name}@Champion")
@@ -204,61 +220,3 @@ loaded_model.predict(
         "max_new_tokens": [100, 100],
     }
 )
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Create Model Serving Endpoint
-# MAGIC Once the model is registered, we can use API to create a Databricks GPU Model Serving Endpoint that serves the `LLaMAV2-7b` model.
-# MAGIC
-# MAGIC Note that the below deployment requires GPU model serving. For more information on GPU model serving, contact the Databricks team or sign up [here](https://docs.google.com/forms/d/1-GWIlfjlIaclqDz6BPODI2j1Xg4f4WbFvBXyebBpN-Y/edit).
-
-# COMMAND ----------
-
-# Provide a name to the serving endpoint
-endpoint_name = 'llama2-7b-completions'
-
-# COMMAND ----------
-
-databricks_url = dbutils.notebook.entry_point.getDbutils().notebook().getContext().apiUrl().getOrElse(None)
-token = dbutils.notebook.entry_point.getDbutils().notebook().getContext().apiToken().getOrElse(None)
-
-# COMMAND ----------
-
-import requests
-import json
-
-deploy_headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
-deploy_url = f'{databricks_url}/api/2.0/serving-endpoints'
-
-model_version = result  # the returned result of mlflow.register_model
-endpoint_config = {
-  "name": endpoint_name,
-  "config": {
-    "served_models": [{
-      "name": f'{model_version.name.replace(".", "_")}_{model_version.version}',
-      "model_name": model_version.name,
-      "model_version": model_version.version,
-      "workload_type": "GPU_MEDIUM",
-      "workload_size": "Small",
-      "scale_to_zero_enabled": "False"
-    }]
-  }
-}
-endpoint_json = json.dumps(endpoint_config, indent='  ')
-
-# Send a POST request to the API
-deploy_response = requests.request(method='POST', headers=deploy_headers, url=deploy_url, data=endpoint_json)
-
-if deploy_response.status_code != 200:
-  raise Exception(f'Request failed with status {deploy_response.status_code}, {deploy_response.text}')
-
-# Show the response of the POST request
-# When first creating the serving endpoint, it should show that the state 'ready' is 'NOT_READY'
-# You can check the status on the Databricks model serving endpoint page, it is expected to take ~35 min for the serving endpoint to become ready
-print(deploy_response.json())
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Once the model serving endpoint is ready, you can query it easily with LangChain (see `04_langchain` for example code) running in the same workspace.

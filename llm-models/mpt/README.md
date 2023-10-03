@@ -16,7 +16,7 @@ limitations under the License.
 
 
 # Example notebooks for MPT model family on Databricks
-This folder contains the fowllowing examples for [MPT-7B](https://www.mosaicml.com/blog/mpt-7b) and [MPT-30B](https://www.mosaicml.com/blog/mpt-30b) models: 
+This folder contains the following examples for [MPT-7B](https://www.mosaicml.com/blog/mpt-7b) and [MPT-30B](https://www.mosaicml.com/blog/mpt-30b) models: 
 
 | File  | Description | Model used | GPU minimum requirement |
 | --- | --- | --- | --- |

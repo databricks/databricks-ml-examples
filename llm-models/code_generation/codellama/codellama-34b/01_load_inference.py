@@ -17,7 +17,8 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install -U git+https://github.com/huggingface/transformers.git
+# MAGIC %pip install -U transformers==4.33.3
+# MAGIC %pip install -U flash-attn==2.3.0
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -203,7 +204,8 @@ print(f"{throughput} tokens/sec, {n_tokens} tokens (including full prompt)")
 # COMMAND ----------
 
 # Restart the Python repl to release the occupied GPU memory.
-%pip install -U git+https://github.com/huggingface/transformers.git
+%pip install -U transformers==4.33.3
+%pip install -U flash-attn==2.3.0
 dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -377,7 +379,8 @@ print(f"{throughput} tokens/sec, {n_tokens} tokens (including full prompt)")
 # COMMAND ----------
 
 # Restart the Python repl to release the occupied GPU memory.
-%pip install -U git+https://github.com/huggingface/transformers.git
+%pip install -U transformers==4.33.3
+%pip install -U flash-attn==2.3.0
 dbutils.library.restartPython()
 
 # COMMAND ----------

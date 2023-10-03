@@ -13,7 +13,8 @@
 # COMMAND ----------
 
 # MAGIC %pip install --upgrade "mlflow-skinny[databricks]>=2.4.1"
-# MAGIC %pip install -U git+https://github.com/huggingface/transformers.git
+# MAGIC %pip install -U transformers==4.33.3
+# MAGIC %pip install -U flash-attn==2.3.0
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -101,8 +102,8 @@ import pandas as pd
 # Define input and output schema
 input_schema = Schema([
     ColSpec(DataType.string, "prompt"), 
-    ColSpec(DataType.double, "temperature"), 
-    ColSpec(DataType.long, "max_new_tokens")])
+    ColSpec(DataType.double, "temperature", optional=True), 
+    ColSpec(DataType.long, "max_new_tokens", optional=True)])
 output_schema = Schema([ColSpec(DataType.string)])
 signature = ModelSignature(inputs=input_schema, outputs=output_schema)
 
