@@ -152,12 +152,13 @@ input_example=pd.DataFrame({
 
 # Log the model with its details such as artifacts, pip requirements and input example
 # This may take about 12 minutes to complete
+torch_version = torch.__version__.split("+")[0]
 with mlflow.start_run() as run:  
     mlflow.pyfunc.log_model(
         "model",
         python_model=MPT(),
         artifacts={'repository' : "/dbfs/mpt-7b"},
-        pip_requirements=[f"torch=={torch.__version__}", 
+        pip_requirements=[f"torch=={torch_version}", 
                           f"transformers=={transformers.__version__}", 
                           f"accelerate=={accelerate.__version__}", "einops", "sentencepiece"],
         input_example=input_example,
