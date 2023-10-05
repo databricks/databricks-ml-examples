@@ -182,7 +182,6 @@ with mlflow.start_run() as run:
         python_model=MistralChat(),
         artifacts={"repository":
            snapshot_location},
-        pip_requirements=["torch", "transformers", "accelerate", "sentencepiece"],
         input_example=input_example,
         signature=signature,
     )
@@ -264,11 +263,8 @@ endpoint_name = 'mistral-7b-chat-completion'
 
 # COMMAND ----------
 
-# MAGIC %pip install --upgrade databricks-sdk
-
-# COMMAND ----------
-
 from databricks.sdk import WorkspaceClient
+from databricks.sdk.service.serving import EndpointCoreConfigInput
 w = WorkspaceClient()
 
 model_version = result  # the returned result of mlflow.register_model
@@ -277,18 +273,18 @@ model_version = result  # the returned result of mlflow.register_model
 # Choose GPU_MEDIUM on Azure, and `GPU_LARGE` on Azure
 workload_type = "GPU_LARGE"
 
-config = {
-        "served_models": [
-            {
-                "name": f'{model_version.name.replace(".", "_")}_{model_version.version}',
-                "model_name": model_version.name,
-                "model_version": model_version.version,
-                "workload_type": workload_type,
-                "workload_size": "Small",
-                "scale_to_zero_enabled": "False",
-            }
-        ]
-    },
+config = EndpointCoreConfigInput.from_dict({
+    "served_models": [
+        {
+            "name": f'{model_version.name.replace(".", "_")}_{model_version.version}',
+            "model_name": model_version.name,
+            "model_version": model_version.version,
+            "workload_type": workload_type,
+            "workload_size": "Small",
+            "scale_to_zero_enabled": "False",
+        }
+    ]
+})
 w.serving_endpoints.create(name=endpoint_name, config=config)
 
 # COMMAND ----------
