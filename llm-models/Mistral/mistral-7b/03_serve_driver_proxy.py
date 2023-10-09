@@ -1,9 +1,11 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC
-# MAGIC # Serving Mistral-7B-Instruct with a cluster driver proxy app
+# MAGIC # Serving Mistral-7B-Instruct via vllm with a cluster driver proxy app
 # MAGIC
 # MAGIC The [Mistral-7B-Instruct-v0.1](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1) Large Language Model (LLM) is a instruct fine-tuned version of the [Mistral-7B-v0.1](https://huggingface.co/mistralai/Mistral-7B-v0.1) generative text model using a variety of publicly available conversation datasets.
+# MAGIC
+# MAGIC [vllm](https://github.com/vllm-project/vllm/tree/main) is an open-source library that makes LLM inference fast with various optimizations.
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 14.0 GPU ML Runtime
@@ -11,7 +13,7 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install -U vllm transformers==4.34.0 accelerate==0.20.3
+# MAGIC %pip install -U vllm==0.2.0 transformers==4.34.0 accelerate==0.20.3
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------

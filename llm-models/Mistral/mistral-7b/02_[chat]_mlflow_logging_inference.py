@@ -109,8 +109,11 @@ class MistralChat(mlflow.pyfunc.PythonModel):
             pad_token_id=self.tokenizer.eos_token_id,
         )
 
-        # Decode the prediction to text
         response_messages = []
+        prompt_length = len(encoded_input)
+
+        # Decode the prediction to text
+        output_tokens = 0
         for i in range(len(output)):
             generated_text = self.tokenizer.decode(output[i], skip_special_tokens=True)
 
@@ -119,9 +122,28 @@ class MistralChat(mlflow.pyfunc.PythonModel):
                 output[i], skip_special_tokens=True
             )
 
-            response_messages.append(generated_response)
+            gen_length = len(output[i]) - prompt_length
 
-        return response_messages
+            generated_response = {
+                "message": {
+                    "role": "assistant",
+                    "content": generated_response[prompt_length:],
+                },
+                "metadata": {"finish_reason": "length" if gen_length==max_tokens else "stop"},
+            }
+
+            response_messages.append(generated_response)
+            output_tokens += gen_length
+
+        metadata = {
+            "input_tokens": prompt_length,
+            "output_tokens": output_tokens,
+            "total_tokens": prompt_length+output_tokens,
+            "model": "mistralai/Mistral-7B-Instruct-v0.1",
+            "route_type": "llm/v1/chat",
+        }
+
+        return response_messages, metadata
 
     def predict(self, context, model_input, params=None):
         """
@@ -140,12 +162,14 @@ class MistralChat(mlflow.pyfunc.PythonModel):
         max_tokens = params.get("max_tokens", 100)
         stop = params.get("stop", [])
 
-        response_messages = self._generate_response(
+        response_messages, metadata = self._generate_response(
             messages, candidate_count, temperature, max_tokens, stop
         )
 
+        outputs.append({"candidates": response_messages, "metadata": metadata})
+
         # {"candidates": [...]} is the required response format for MLflow AI gateway -- see 07_ai_gateway for example
-        return {"predictions": {"candidates": response_messages}}
+        return outputs
 
 # COMMAND ----------
 
@@ -183,6 +207,7 @@ with mlflow.start_run() as run:
         artifacts={"repository":
            snapshot_location},
         input_example=input_example,
+        pip_requirements=["torch==2.0.1", "transformers==4.34.0", "accelerate==0.21.0", "torchvision==0.15.2"],
         signature=signature,
     )
 
@@ -345,3 +370,7 @@ print(deploy_response.json())
 
 # MAGIC %md
 # MAGIC Once the model serving endpoint is ready, you can query it easily with LangChain (see `04_langchain` for example code) running in the same workspace.
+
+# COMMAND ----------
+
+

@@ -20,7 +20,7 @@
 
 # TODO: Please change endpoint_name to your Databricks serving endpoint name if it's different
 # The below assumes you've create an endpoint "mistral-7b-instruct " according to 02_mlflow_logging_inference
-endpoint_name = "mistral-7b-instruct "
+endpoint_name = "mistral-7b-instruct"
 gateway_route_name = f"{endpoint_name}_completion"
 
 # COMMAND ----------

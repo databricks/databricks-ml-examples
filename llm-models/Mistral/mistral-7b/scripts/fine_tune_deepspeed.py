@@ -27,11 +27,11 @@ from transformers import (
 logger = logging.getLogger(__name__)
 
 ROOT_PATH = Path(__file__).parent.parent
-MODEL_PATH = 'meta-llama/Llama-2-7b-hf'
-TOKENIZER_PATH = 'meta-llama/Llama-2-7b-hf'
+MODEL_PATH = "mistralai/Mistral-7B-v0.1"
+TOKENIZER_PATH = "mistralai/Mistral-7B-v0.1"
 DEFAULT_TRAINING_DATASET = "mosaicml/dolly_hhrlhf"
 CONFIG_PATH = "../../config/a10_config.json"
-LOCAL_OUTPUT_DIR = "/dbfs/llama-2-fine-tune/output"
+LOCAL_OUTPUT_DIR = "/dbfs/Mistral-7B-fine-tune/output"
 DEFAULT_SEED = 68
 
 

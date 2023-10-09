@@ -134,6 +134,7 @@ with mlflow.start_run() as run:
         python_model=Mistral7B(),
         artifacts={'repository' : snapshot_location},
         input_example=input_example,
+        pip_requirements=["torch==2.0.1", "transformers==4.34.0", "accelerate==0.21.0", "torchvision==0.15.2"],
         signature=signature,
     )
 
