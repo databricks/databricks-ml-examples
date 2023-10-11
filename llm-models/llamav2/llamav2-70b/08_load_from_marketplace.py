@@ -11,7 +11,7 @@
 # COMMAND ----------
 
 # To access models in Unity Catalog, ensure that MLflow is up to date
-%pip install --upgrade mlflow-skinny[databricks]
+%pip install --upgrade "mlflow-skinny[databricks]>=2.4.1"
 dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -20,14 +20,42 @@ import mlflow
 
 mlflow.set_registry_uri("databricks-uc")
 
-# TODO: Please replace catalog_name with the name of the catalog containing this model
-catalog_name = "marketplace_llama_2_models"
+catalog_name = "databricks_llama_2_models" # Default catalog name when installing the model from Databricks Marketplace
 version = 1
 
 # Create a Spark UDF to generate the response to a prompt
 generate = mlflow.pyfunc.spark_udf(
     spark, f"models:/{catalog_name}.models.llama_2_70b_chat_hf/{version}", "string"
 )
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC The Spark UDF `generate` could inference on Spark DataFrames.
+
+# COMMAND ----------
+
+import pandas as pd
+
+df = spark.createDataFrame(
+    pd.DataFrame(
+        {
+            "text": [
+                "What is a large language model?",
+                # "Write a short announcement of Llama 2 models in Databricks Marketplace.",
+            ]
+        }
+    )
+)
+display(df)
+
+generated_df = df.select(generate(df.text).alias("generated_text"))
+display(generated_df)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC We could also wrap the Spark UDF into a function that takes system prompts, and takes lists of text strings as input/output.
 
 # COMMAND ----------
 
