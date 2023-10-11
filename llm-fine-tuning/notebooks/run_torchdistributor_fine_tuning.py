@@ -3,7 +3,9 @@
 # COMMAND ----------
 
 # MAGIC %pip install -r ../requirements.txt
+# COMMAND ----------
 
+# MAGIC !cd .. && pip install .
 # COMMAND ----------
 
 # MAGIC %load_ext autoreload
@@ -18,7 +20,6 @@ notebook_login()
 # COMMAND ----------
 
 import os
-import pathlib
 
 os.environ["HF_HOME"] = "/local_disk0/hf"
 os.environ["HF_DATASETS_CACHE"] = "/local_disk0/hf"
@@ -42,7 +43,6 @@ logging.getLogger("sh.command").setLevel(logging.ERROR)
 
 from databricks_llm.notebook_utils import get_dbutils
 from databricks_llm.utils import (
-    copy_source_code,
     remote_login,
     check_mount_dev_shm,
     ExtendedTrainingArguments,
@@ -106,9 +106,6 @@ dbfs_output_location = get_dbutils().widgets.get("dbfs_output_location")
 
 # COMMAND ----------
 remote_login()
-# COMMAND ----------
-
-# MAGIC !cd .. && pip install -e .
 # COMMAND ----------
 
 deepspeed_config_dict = None

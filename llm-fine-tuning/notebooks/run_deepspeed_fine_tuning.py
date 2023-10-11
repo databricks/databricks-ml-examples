@@ -7,6 +7,9 @@
 
 # COMMAND ----------
 
+# MAGIC !cd .. && pip install .
+# COMMAND ----------
+
 # MAGIC %load_ext autoreload
 # MAGIC %autoreload 2
 
