@@ -13,7 +13,7 @@
 
 from huggingface_hub import notebook_login, login
 
-# notebook_login()
+notebook_login()
 
 # COMMAND ----------
 
