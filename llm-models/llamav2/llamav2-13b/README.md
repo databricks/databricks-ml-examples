@@ -45,3 +45,4 @@ table th:nth-of-type(4) {
 |      [05_fine_tune_deepspeed](05_fine_tune_deepspeed.py)      |                         Fine-tune Llama 2 base models leveraging DeepSpeed.                          |   `Llama-2-13b-hf`    |    8xA10 or 2xA100-80GB     |
 |          [06_fine_tune_qlora](06_fine_tune_qlora.py)          |                              Fine-tune Llama 2 base models with QLORA.                               |   `Llama-2-13b-hf`    |            1xA10            |
 |               [07_ai_gateway](07_ai_gateway.py)               |         Manage a MLflow AI Gateway Route that accesses a Databricks model serving endpoint.          |          N/A          |             N/A             |
+|      [08_load_from_marketplace](08_load_from_marketplace.py)  |         Load Llama 2 models from Databricks Marketplace.	          |     `Llama-2-13b-chat-hf`   |            2xA10-24GB             |

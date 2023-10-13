@@ -40,3 +40,4 @@ table th:nth-of-type(4) {
 |:-------------------------------------------:|:---------------------------------------------------------------------------------------------------------------------:|:---------------------:|:---------------------------:|
 |  [01_load_inference](01_load_inference.py)  | Environment setup and suggested configurations when inferencing Llama 2 models on Databricks.                         | `Llama-2-70b-chat-hf` |         2xA100-80GB         |
 | [06_fine_tune_qlora](06_fine_tune_qlora.py) | Fine-tune Llama 2 base models with QLORA.                                                                             |   `Llama-2-70b-hf`    |         1xA100-80GB         |
+| [08_load_from_marketplace](08_load_from_marketplace.py)  |         Load Llama 2 models from Databricks Marketplace.	          |     `Llama-2-70b-chat-hf`   |            2xA100-80GB             |
