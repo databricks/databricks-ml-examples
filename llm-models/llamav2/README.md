@@ -27,3 +27,4 @@ This folder contains the following examples for Llama 2 models:
 | `05_fine_tune_deepspeed`      | Fine-tune Llama 2 base models leveraging DeepSpeed.                                                                   | `Llama-2-7b-hf`          | 4xA10 or 2xA100-80GB        |
 | `06_fine_tune_qlora`          | Fine-tune Llama 2 base models with QLORA.                                                                             | `Llama-2-7b-hf`          | 1xA10                       |
 | `07_ai_gateway` | Manage a MLflow AI Gateway Route that accesses a Databricks model serving endpoint. | N/A | N/A
+| `08_load_from_marketplace` | Load Llama 2 models from Databricks Marketplace.                                                                         | `Llama-2-7b-chat-hf` | 1xA10                       |
