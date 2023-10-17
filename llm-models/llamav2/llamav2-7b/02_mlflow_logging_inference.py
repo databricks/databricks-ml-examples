@@ -34,13 +34,6 @@ notebook_login()
 model_name = "meta-llama/Llama-2-7b-chat-hf"
 revision = "08751db2aca9bf2f7f80d2e516117a53d7450235"
 
-# from huggingface_hub import snapshot_download
-
-# # If the model has been downloaded in previous cells, this will not repetitively download large model files, but only the remaining files in the repo
-# snapshot_location = snapshot_download(
-#     repo_id=model_name, revision=revision, ignore_patterns="*.safetensors*"
-# )
-
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
@@ -121,7 +114,6 @@ mlflow.set_registry_uri("databricks-uc")
 # This may take 2.2 minutes to complete
 
 registered_name = "models.default.llama2_7b_completions" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
-# registered_name = "models.default.llama2_7b_completions_wenfei"
 
 result = mlflow.register_model(
     "runs:/"+run.info.run_id+"/model",
@@ -135,11 +127,6 @@ client = MlflowClient()
 
 # Choose the right model version registered in the above cell.
 client.set_registered_model_alias(name=registered_name, alias="Champion", version=result.version)
-# client.set_registered_model_alias(name=registered_name, alias="new-example", version=result.version)
-
-# COMMAND ----------
-
-result.version
 
 # COMMAND ----------
 
@@ -154,49 +141,8 @@ import pandas as pd
 registered_name = "models.default.llama2_7b_completions_wenfei"
 
 loaded_model = mlflow.pyfunc.load_model(f"models:/{registered_name}@Champion")
-# loaded_model = mlflow.pyfunc.load_model(f"models:/{registered_name}@new-example")
 
 # Make a prediction using the loaded model
-loaded_model.predict(
-  {"prompt": "What is large language model?"}, 
-  params={
-    "temperature": 0.5,
-    "max_new_tokens": 100,
-    }
-)
-
-# COMMAND ----------
-
-loaded_model.predict(
-  build_prompt("What is large language model?"), 
-  params={
-    "temperature": 0.5,
-    "max_new_tokens": 100,
-    }
-)
-
-# COMMAND ----------
-
-# import mlflow
-# from mlflow.models import infer_signature
-# from mlflow.models.signature import ModelSignature
-# from mlflow.types import DataType, Schema, ColSpec
-
-# input_example = {"prompt": build_prompt("What is Machine Learning?")}
-# inference_config = {
-#   "temperature": 1.0,
-#   "max_new_tokens": 100,
-#   "do_sample": True,
-# }
-# signature = infer_signature(
-#   model_input=input_example,
-#   model_output="Machien Learning is...",
-#   params=inference_config
-# )
-# signature
-
-# COMMAND ----------
-
 loaded_model.predict(
   {"prompt": "What is large language model?"}, 
   params={
