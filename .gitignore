@@ -5,3 +5,8 @@ _SUCCESS
 .DS_Store
 .idea
 model-export-demo/target
+.fleet
+*.iml
+.mypy_cache
+.databricks
+*.egg-info

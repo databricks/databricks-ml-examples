@@ -1,5 +1,5 @@
 # Databricks notebook source
-# MAGIC %pip install torch==2.0.1
+# MAGIC %pip install torch==2.1.0
 
 # COMMAND ----------
 
@@ -46,8 +46,9 @@ from databricks_llm.notebook_utils import get_dbutils
 
 # COMMAND ----------
 
-DEFAULT_INPUT_MODEL = "meta-llama/Llama-2-7b-chat-hf"
+DEFAULT_INPUT_MODEL = "mistralai/Mistral-7B-Instruct-v0.1"
 SUPPORTED_INPUT_MODELS = [
+    "mistralai/Mistral-7B-Instruct-v0.1",
     "mosaicml/mpt-30b-instruct",
     "mosaicml/mpt-7b-instruct",
     "meta-llama/Llama-2-7b-chat-hf",

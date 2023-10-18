@@ -1,18 +1,21 @@
 import functools
 import json
 import pathlib
+import os
 from dataclasses import field, dataclass
 import logging
 from typing import Optional, Union, Tuple, Dict, Any
 import shutil
 
 import yaml
+from huggingface_hub import login
 from transformers import (
     IntervalStrategy,
     SchedulerType,
 )
 
 logger = logging.getLogger(__name__)
+LOCAL_DISK_HF = "/local_disk0/hf"
 
 
 @dataclass
@@ -87,9 +90,25 @@ def _mount(it):
 
 
 def get_spark():
-    import IPython
+    try:
+        import IPython
 
-    return IPython.get_ipython().user_ns["spark"]
+        return IPython.get_ipython().user_ns["spark"]
+    except:
+        raise Exception(
+            "Spark is not available! You are probably running this code outside of Databricks environment."
+        )
+
+
+def get_display():
+    try:
+        import IPython
+
+        return IPython.get_ipython().user_ns["display"]
+    except:
+        raise Exception(
+            "Spark is not available! You are probably running this code outside of Databricks environment."
+        )
 
 
 def _num_executors():
@@ -109,7 +128,7 @@ def check_mount_dev_shm():
     p_df = input_df.mapInPandas(
         func=_mount, schema="res string", barrier=True
     ).toPandas()
-    display(p_df)
+    get_display()(p_df)
 
 
 def copy_source_code(dest: str):
@@ -125,7 +144,7 @@ def copy_source_code(dest: str):
     )
 
 
-def hf_login(it, token_file: str = ""):
+def write_huggingface_token(it, token_file: str = ""):
     import pandas as pd
 
     for _ in it:
@@ -134,15 +153,41 @@ def hf_login(it, token_file: str = ""):
         yield pd.DataFrame(data={"res": ["OK"]})
 
 
-def remote_login():
-    if pathlib.Path("/root/.cache/huggingface/token").exists():
-        token = pathlib.Path("/root/.cache/huggingface/token").read_text()
+def remote_login(args: ExtendedTrainingArguments):
+    token = get_huggingface_token(args)
+    if token:
         input_df = _prepare_df_for_all_executors()
-        _f = functools.partial(hf_login, token_file=token)
+        _f = functools.partial(write_huggingface_token, token_file=token)
         p_df = input_df.mapInPandas(
             func=_f, schema="res string", barrier=True
         ).toPandas()
-        display(p_df)
+        get_display()(p_df)
+
+
+def huggingface_login(args: ExtendedTrainingArguments):
+    token = get_huggingface_token(args)
+    if token:
+        login(token)
+
+
+def get_huggingface_token(args: ExtendedTrainingArguments) -> str | None:
+    if args.token is not None and len(args.token):
+        return args.token
+    elif pathlib.Path("/root/.cache/huggingface/token").exists():
+        return pathlib.Path("/root/.cache/huggingface/token").read_text()
+    elif pathlib.Path(f"{LOCAL_DISK_HF}/huggingface/token").exists():
+        pathlib.Path(f"{LOCAL_DISK_HF}/huggingface/token").read_text()
+    else:
+        return None
+
+
+def set_up_huggingface_cache():
+    pathlib.Path(LOCAL_DISK_HF).mkdir(parents=True, exist_ok=True)
+    os.environ["HF_HOME"] = LOCAL_DISK_HF
+    os.environ["HF_DATASETS_CACHE"] = LOCAL_DISK_HF
+    os.environ["TRANSFORMERS_CACHE"] = LOCAL_DISK_HF
+    os.environ["NCCL_P2P_DISABLE"] = "1"
+    os.environ["NCCL_DEBUG"] = "INFO"
 
 
 def resolve_deepspeed_config(path: str) -> Dict[str, Any]:

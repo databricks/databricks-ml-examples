@@ -1,11 +1,12 @@
 import IPython
 
 import logging
+from databricks.sdk import WorkspaceClient, dbutils
 
 logger = logging.getLogger(__name__)
 
 
-def get_dbutils():
+def get_dbutils() -> dbutils:
     """
     Returns dbutils object. Works only on Databricks.
     """

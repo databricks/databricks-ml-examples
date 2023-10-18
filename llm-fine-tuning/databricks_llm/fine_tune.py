@@ -2,23 +2,11 @@ import json
 import logging
 
 import os
-from typing import Tuple, Dict
-import pathlib
+from typing import Tuple, Dict, Union, Callable, List
 import torch
 import torch.distributed
-from accelerate import FullyShardedDataParallelPlugin, Accelerator
-from accelerate.utils import PrecisionType
 
 from datasets import Dataset, load_dataset, load_from_disk, DatasetDict
-
-from huggingface_hub import login
-from torch.distributed.fsdp import FullStateDictConfig
-from torch.distributed.fsdp.api import (
-    FullOptimStateDictConfig,
-    ShardingStrategy,
-    CPUOffload,
-    StateDictType,
-)
 
 from transformers import (
     AutoModelForCausalLM,
@@ -30,37 +18,70 @@ from transformers import (
 )
 
 from databricks_llm.model_utils import get_model_and_tokenizer, get_tokenizer
-from databricks_llm.utils import ExtendedTrainingArguments
-
-LOCAL_DISK_HF = "/local_disk0/hf"
+from databricks_llm.utils import (
+    ExtendedTrainingArguments,
+    set_up_huggingface_cache,
+    huggingface_login,
+)
 
 logger = logging.getLogger(__name__)
 
 
-def load_training_dataset(
-    tokenizer,
+def load_splits_from_dataset_dict(
+    dataset_dict: DatasetDict,
     path_or_dataset: str,
     split: str,
-    dataset_text_field: str = "text",
-    max_seq_len: int = 512,
-    formatting_func=None,
 ) -> Dataset:
-    logger.info(f"Loading dataset from {path_or_dataset}")
-    if path_or_dataset.startswith("/"):
-        dataset = load_from_disk(path_or_dataset)
-        if isinstance(dataset, DatasetDict):
-            dataset = dataset[split]
-            print(
-                f"Loaded dataset {path_or_dataset} from disk for split {split} with {len(dataset)} rows."
-            )
-    else:
-        dataset = load_dataset(path_or_dataset, split=split)
-        print(
-            f"Loaded dataset {path_or_dataset} from HF Hub for split {split} with {len(dataset)} rows."
+    dataset = dataset_dict.get(split)
+    if dataset:
+        logger.info(
+            f"Loaded train dataset {path_or_dataset} from disk for split {split} with {len(dataset)} rows."
         )
-    logger.info("Found %d rows", dataset.num_rows)
-    logger.info("Found %d rows", len(dataset))
+        return dataset
+    else:
+        raise Exception(
+            f"Split {split} does not exist in the dataset loaded from {path_or_dataset}! Please fix configuration!"
+        )
 
+
+def split_dataset(
+    dataset: Dataset,
+    path_or_dataset: str,
+) -> Tuple[Dataset, Dataset]:
+    logger.info(f"Loaded dataset {path_or_dataset} from disk with {len(dataset)} rows.")
+    ds = dataset.train_test_split(test_size=0.2, shuffle=True)
+    train_dataset = ds["train"]
+    test_dataset = ds["test"]
+    return train_dataset, test_dataset
+
+
+def load_dataset_or_split(
+    ds: Union[Dataset, DatasetDict], path_or_dataset, test_split, train_split
+) -> Tuple[Dataset, Dataset]:
+    if isinstance(ds, DatasetDict):
+        dataset_dict = ds
+        train_dataset = load_splits_from_dataset_dict(
+            dataset_dict, path_or_dataset, train_split
+        )
+        test_dataset = load_splits_from_dataset_dict(
+            dataset_dict, path_or_dataset, test_split
+        )
+    elif isinstance(ds, Dataset):
+        train_dataset, test_dataset = split_dataset(ds, path_or_dataset)
+    else:
+        raise Exception(
+            f"Cannot load datasets from the following path {path_or_dataset} and for the following splits: {train_split} and {test_split} !"
+        )
+    return train_dataset, test_dataset
+
+
+def tokenize_dataset(
+    dataset: Dataset,
+    tokenizer: PreTrainedTokenizer,
+    dataset_text_field: str,
+    formatting_func: Callable,
+    max_seq_len: int,
+):
     use_formatting_func = formatting_func is not None and dataset_text_field is None
 
     # Inspired from: https://huggingface.co/learn/nlp-course/chapter7/6?fw=pt
@@ -91,15 +112,44 @@ def load_training_dataset(
     tokenized_dataset = dataset.map(
         tokenize, batched=True, remove_columns=dataset.column_names
     )
-
-    print(len(tokenized_dataset))
-
     return tokenized_dataset
+
+
+def load_huggingface_dataset(
+    tokenizer,
+    path_or_dataset: str,
+    train_split: str = "train",
+    test_split: str = "test",
+    dataset_text_field: str = "text",
+    max_seq_len: int = 512,
+    formatting_func=None,
+) -> Tuple[Dataset, Dataset]:
+    logger.info(f"Loading dataset from {path_or_dataset}")
+    if path_or_dataset.startswith("/"):
+        ds = load_from_disk(path_or_dataset)
+        train_dataset, test_dataset = load_dataset_or_split(
+            ds, path_or_dataset, test_split, train_split
+        )
+
+    else:
+        ds = load_dataset(path_or_dataset)
+        train_dataset, test_dataset = load_dataset_or_split(
+            ds, path_or_dataset, test_split, train_split
+        )
+
+    tokenized_train_dataset = tokenize_dataset(
+        train_dataset, tokenizer, dataset_text_field, formatting_func, max_seq_len
+    )
+    tokenized_test_dataset = tokenize_dataset(
+        test_dataset, tokenizer, dataset_text_field, formatting_func, max_seq_len
+    )
+
+    return tokenized_train_dataset, tokenized_test_dataset
 
 
 def setup_hf_trainer(
     train_dataset,
-    eval_dataset=None,
+    eval_dataset,
     **config,
 ) -> Tuple[Trainer, AutoModelForCausalLM, PreTrainedTokenizer]:
     args: ExtendedTrainingArguments = config["args"]
@@ -160,8 +210,8 @@ def setup_hf_trainer(
 
 
 def train(args: ExtendedTrainingArguments):
-    set_up_hf_cache()
-    handle_hf_key(args)
+    set_up_huggingface_cache()
+    huggingface_login(args)
     handle_fsdp_params(args)
 
     # if args.fsdp_config:
@@ -186,11 +236,8 @@ def train(args: ExtendedTrainingArguments):
     #     fsdp_plugin = None
 
     tokenizer = get_tokenizer(args.tokenizer)
-    train_dataset = load_training_dataset(
-        tokenizer, args.dataset, "train", "text", 256, formatting_func=None
-    )
-    eval_dataset = load_training_dataset(
-        tokenizer, args.dataset, "test", "text", 256, formatting_func=None
+    train_dataset, eval_dataset = load_huggingface_dataset(
+        tokenizer, args.dataset, "train", "test", "text", 256, formatting_func=None
     )
     if isinstance(args.deepspeed_config, str):
         with open(args.deepspeed_config) as json_data:
@@ -268,24 +315,8 @@ def main():
     train(args)
 
 
-def handle_hf_key(args):
-    if args.token is not None and len(args.token):
-        login(args.token)
-    elif pathlib.Path("/root/.cache/huggingface/token").exists():
-        login(pathlib.Path("/root/.cache/huggingface/token").read_text())
-
-
-def set_up_hf_cache():
-    pathlib.Path(LOCAL_DISK_HF).mkdir(parents=True, exist_ok=True)
-    os.environ["HF_HOME"] = LOCAL_DISK_HF
-    os.environ["HF_DATASETS_CACHE"] = LOCAL_DISK_HF
-    os.environ["TRANSFORMERS_CACHE"] = LOCAL_DISK_HF
-    os.environ["NCCL_P2P_DISABLE"] = "1"
-    os.environ["NCCL_DEBUG"] = "INFO"
-
-
 if __name__ == "__main__":
-    set_up_hf_cache()
+    set_up_huggingface_cache()
 
     logging.basicConfig(
         format="%(asctime)s %(levelname)s [%(name)s] %(message)s",

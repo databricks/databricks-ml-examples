@@ -1,5 +1,5 @@
 # Databricks notebook source
-# MAGIC %pip install torch==2.0.1
+# MAGIC %pip install torch==2.1.0
 # COMMAND ----------
 
 # MAGIC %pip install -r ../requirements.txt
@@ -56,8 +56,9 @@ from pyspark.ml.torch.distributor import TorchDistributor
 check_mount_dev_shm()
 # COMMAND ----------
 
-DEFAULT_INPUT_MODEL = "meta-llama/Llama-2-7b-chat-hf"
+DEFAULT_INPUT_MODEL = "mistralai/Mistral-7B-Instruct-v0.1"
 SUPPORTED_INPUT_MODELS = [
+    "mistralai/Mistral-7B-Instruct-v0.1",
     "mosaicml/mpt-30b-instruct",
     "mosaicml/mpt-7b-instruct",
     "meta-llama/Llama-2-7b-chat-hf",
@@ -105,8 +106,6 @@ dataset = get_dbutils().widgets.get("dataset")
 dbfs_output_location = get_dbutils().widgets.get("dbfs_output_location")
 
 # COMMAND ----------
-remote_login()
-# COMMAND ----------
 
 deepspeed_config_dict = None
 fsdp_config_dict = None
@@ -144,6 +143,9 @@ args = ExtendedTrainingArguments(
     save_steps=100,
     num_train_epochs=1,
 )
+
+if not local_mode:
+    remote_login(args)
 
 
 distributor = TorchDistributor(

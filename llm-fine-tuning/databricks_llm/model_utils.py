@@ -15,6 +15,21 @@ from transformers import (
 logger = logging.getLogger(__name__)
 
 
+def find_all_linear_names(model: AutoModelForCausalLM):
+    import bitsandbytes as bnb
+
+    cls = bnb.nn.Linear4bit
+    lora_module_names = set()
+    for name, module in model.named_modules():
+        if isinstance(module, cls):
+            names = name.split(".")
+            lora_module_names.add(names[0] if len(names) == 1 else names[-1])
+
+    if "lm_head" in lora_module_names:  # needed for 16-bit
+        lora_module_names.remove("lm_head")
+    return list(lora_module_names)
+
+
 def get_model(
     pretrained_name_or_path: str,
     use_4bit: bool = False,
@@ -58,15 +73,12 @@ def get_model(
         model = prepare_model_for_kbit_training(model)
 
     if use_lora:
+        linear_layers = find_all_linear_names(model)
+        logger.info(f"Detected following linear layers in the model: {linear_layers}")
         lora_config = LoraConfig(
             r=16,
             lora_alpha=32,
-            target_modules=[
-                "query_key_value",
-                "dense",
-                "dense_h_to_4h",
-                "dense_4h_to_h",
-            ],
+            target_modules=linear_layers,
             lora_dropout=0.05,
             bias="none",
             task_type="CAUSAL_LM",

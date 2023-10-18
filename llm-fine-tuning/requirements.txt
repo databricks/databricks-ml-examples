@@ -1,6 +1,6 @@
-torch==2.0.1
+torch==2.1.0
 accelerate==0.21.0
-transformers[torch]==4.31.0
+transformers[torch]==4.34.0
 datasets>=2.10.0,<3
 deepspeed==0.10.0
 peft
@@ -8,3 +8,4 @@ einops
 bitsandbytes
 tiktoken
 click>=8.0.4,<9
+databricks_sdk
