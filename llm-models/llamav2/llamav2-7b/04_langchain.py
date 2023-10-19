@@ -2,42 +2,12 @@
 # MAGIC %md
 # MAGIC # Load Llama-2-7b-chat-hf from LangChain on Databricks
 # MAGIC
-# MAGIC This example notebook is adapts the [LangChain integration documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/databricks), and shows how to wrap Databricks endpoints as LLMs in LangChain. It supports two endpoint types:
-# MAGIC
-# MAGIC - Serving endpoint, recommended for production and development. See `02_mlflow_logging_inference` for how to create one.
-# MAGIC - Cluster driver proxy app, recommended for iteractive development. See `03_serve_driver_proxy` for how to create one.
+# MAGIC This example notebook is adapts the [LangChain integration documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/databricks), and shows how to wrap Databricks cluster driver proxy app as LLMs in LangChain. See `03_serve_driver_proxy` for how to create one.
 # MAGIC
 # MAGIC Environment tested:
 # MAGIC - MLR: 13.2 ML
 # MAGIC - Instance:
-# MAGIC   - Wrapping a serving endpoint: `i3.xlarge` on AWS, `Standard_DS3_v2` on Azure
-# MAGIC   - Wrapping a cluster driver proxy app: `g5.4xlarge` on AWS, `Standard_NV36ads_A10_v5` on Azure (same instance as the driver proxy app)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Wrapping a serving endpoint
-# MAGIC The LangChain Databricks integration could wrap a serving endpoint.
-# MAGIC
-# MAGIC It requires a model serving endpoint (see `02_mlflow_logging_inference` for how to create one) to be in the "Ready" state.
-
-# COMMAND ----------
-
-# MAGIC %pip install -q -U langchain
-# MAGIC dbutils.library.restartPython()
-
-# COMMAND ----------
-
-from langchain.llms import Databricks
-
-# This model serving endpoint is created in `02_mlflow_logging_inference`
-llm = Databricks(endpoint_name='llama2-7b-chat')
-
-# COMMAND ----------
-
-result = llm("How to master Python in 3 days?", temperature=0.1, max_new_tokens=200)
-
-displayHTML(result)
+# MAGIC   - `g5.4xlarge` on AWS, `Standard_NV36ads_A10_v5` on Azure (same instance as the driver proxy app)
 
 # COMMAND ----------
 
