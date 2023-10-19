@@ -94,6 +94,7 @@ def generate_text(prompt, **kwargs):
         {
             "pad_token_id": tokenizer.eos_token_id,
             "eos_token_id": tokenizer.eos_token_id,
+            "use_cache": True, # make sure we use kv cache for lowest latency
         }
     )
   
