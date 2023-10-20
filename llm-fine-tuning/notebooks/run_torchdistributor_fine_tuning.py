@@ -11,7 +11,7 @@
 
 # COMMAND ----------
 
-from huggingface_hub import notebook_login, login
+from huggingface_hub import notebook_login
 
 notebook_login()
 

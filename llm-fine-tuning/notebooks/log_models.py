@@ -18,10 +18,6 @@ import mlflow
 import torch
 import logging
 
-print(torch.__version__)
-
-# notebook_login()
-
 # COMMAND ----------
 
 import os
