@@ -74,7 +74,7 @@ class HFTrainingArguments:
     local_rank: Optional[str] = field(default="-1")
     dataset: Optional[str] = field(default=DEFAULT_TRAINING_DATASET)
     cache_dir: Optional[str] = field(default=TRANSFORMER_CACHE)
-    use_auth_token: Optional[str] = field(default="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")
+    use_auth_token: Optional[str] = field(default=None)
     model: Optional[str] = field(default=MODEL_PATH)
     tokenizer: Optional[str] = field(default=TOKENIZER_PATH)
     max_seq_len: Optional[int] = field(default=256)
