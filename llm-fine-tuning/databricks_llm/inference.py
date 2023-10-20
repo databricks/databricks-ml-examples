@@ -12,6 +12,8 @@ from transformers import (
     AutoTokenizer,
     PreTrainedTokenizer,
     AutoConfig,
+    StoppingCriteriaList,
+    StoppingCriteria,
 )
 
 import pandas as pd
@@ -31,6 +33,19 @@ class DocumentContext:
         return [doc.page_content for doc in docs]
 
 
+class ChatStoppingCriteria(StoppingCriteria):
+    def __init__(self, stops=[]):
+        super().__init__()
+        self.stops = [stop.to("cuda") for stop in stops]
+
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor):
+        for stop in self.stops:
+            if torch.all((stop[2:] == input_ids[0][-(len(stop) - 2) :])).item():
+                return True
+
+        return False
+
+
 def generate_text(
     model: AutoModelForCausalLM,
     tokenizer: PreTrainedTokenizer,
@@ -38,6 +53,7 @@ def generate_text(
     temperature: float = 0.7,
     top_k: float = 0.92,
     max_new_tokens: int = 200,
+    stop_words: List[str] = None,
 ) -> List[str]:
     if isinstance(prompt, str):
         prompts = [prompt]
@@ -46,9 +62,21 @@ def generate_text(
     batch = tokenizer(prompts, padding=True, truncation=True, return_tensors="pt")
     batch = batch.to("cuda")
 
+    if stop_words and len(stop_words) > 0:
+        stop_words_ids = [
+            tokenizer(stop_word, return_tensors="pt")["input_ids"].squeeze()
+            for stop_word in stop_words
+        ]
+        stopping_criteria = StoppingCriteriaList(
+            [ChatStoppingCriteria(stops=stop_words_ids)]
+        )
+    else:
+        stopping_criteria = None
+
     with torch.no_grad():
         output_tokens_batch = model.generate(
             use_cache=True,
+            do_sample=True,
             input_ids=batch.input_ids,
             max_new_tokens=max_new_tokens,
             min_new_tokens=10,
@@ -56,7 +84,8 @@ def generate_text(
             top_p=top_k,
             num_return_sequences=1,
             pad_token_id=tokenizer.eos_token_id,
-            eos_token_id=tokenizer.encode("[/INST]"),
+            # eos_token_id=tokenizer.encode("[/INST]"),
+            stopping_criteria=stopping_criteria,
         )
 
     generated_responses = []
@@ -91,6 +120,7 @@ def generate_text_for_df(
     temperature: float = 0.7,
     top_k: float = 0.92,
     max_new_tokens: int = 200,
+    stop_words: List[str] = None,
 ):
     src_col_values = []
     responses_list = []
@@ -110,6 +140,7 @@ def generate_text_for_df(
             temperature=temperature,
             top_k=top_k,
             max_new_tokens=max_new_tokens,
+            stop_words=stop_words,
         )
 
         for response in responses:

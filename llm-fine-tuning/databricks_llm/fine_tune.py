@@ -156,6 +156,11 @@ def setup_hf_trainer(
 
     torch.backends.cuda.matmul.allow_tf32 = True
 
+    model, tokenizer = get_model_and_tokenizer(
+        args.model, use_4bit=args.use_4bit, load_in_8bit=False, use_lora=args.use_lora
+    )
+    detect_fsdp_transformer_cls_to_wrap(args, model)
+
     training_args = TrainingArguments(
         # local_rank=args.local_rank,
         output_dir=args.output_dir,
@@ -189,9 +194,6 @@ def setup_hf_trainer(
         ddp_find_unused_parameters=False,
     )
 
-    model, tokenizer = get_model_and_tokenizer(
-        args.model, use_4bit=args.use_4bit, load_in_8bit=False, use_lora=args.use_lora
-    )
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
     # if fsdp_pluin:
@@ -257,11 +259,29 @@ def train(args: ExtendedTrainingArguments):
     tokenizer.save_pretrained(args.final_model_output_path)
 
 
-def handle_fsdp_params(args):
+def handle_fsdp_params(args: ExtendedTrainingArguments):
     if args.fsdp_config and isinstance(args.fsdp_config, Dict):
         os.environ["ACCELERATE_USE_FSDP"] = "true"
         for k, v in args.fsdp_config.items():
             os.environ[k.upper()] = str(v)
+
+
+def detect_fsdp_transformer_cls_to_wrap(
+    args: ExtendedTrainingArguments, model: AutoModelForCausalLM
+):
+    if args.fsdp_config and isinstance(args.fsdp_config, Dict):
+        cls_to_wrap = args.fsdp_config.get("fsdp_transformer_cls_to_wrap")
+        if cls_to_wrap is None:
+            print("fsdp_transformer_cls_to_wrap is not set. Trying to detect it.")
+            try:
+                layer = getattr(getattr(model, "model"), "layers")[0]
+                cls_to_wrap = type(layer).__name__
+                print(f"Detected {cls_to_wrap}")
+                os.environ["fsdp_transformer_cls_to_wrap".upper()] = str(cls_to_wrap)
+            except:
+                raise Exception(
+                    "Using FSDP and fsdp_transformer_cls_to_wrap was not set. Automatic detection has also failed. Please set it manually in fsdp config!"
+                )
 
 
 # def get_fsdp_plugin(args: ExtendedTrainingArguments):

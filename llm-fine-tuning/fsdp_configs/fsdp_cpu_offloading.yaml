@@ -4,6 +4,5 @@ fsdp_offload_params: true
 fsdp_offload_optimizer: true
 fsdp_sharding_strategy: 1
 fsdp_state_dict_type: SHARDED_STATE_DICT
-fsdp_transformer_cls_to_wrap: LlamaDecoderLayer
 
 

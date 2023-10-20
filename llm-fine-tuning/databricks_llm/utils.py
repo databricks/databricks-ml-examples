@@ -32,8 +32,10 @@ class ExtendedTrainingArguments:
 
     final_model_output_path: Optional[str] = field(default="/local_disk0/final_model")
 
-    deepspeed_config: Optional[Tuple[str, Dict[str, Any]]] = field(default=None)
-    fsdp_config: Optional[Tuple[str, Dict[str, Any]]] = field(default=None)
+    deepspeed_config: Union[Optional[str], Optional[Dict[str, Any]]] = field(
+        default=None
+    )
+    fsdp_config: Union[Optional[str], Optional[Dict[str, Any]]] = field(default=None)
 
     output_dir: Optional[str] = field(default=None)
     per_device_train_batch_size: Optional[int] = field(default=1)

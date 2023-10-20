@@ -1,6 +1,4 @@
 # Databricks notebook source
-# MAGIC %pip install torch==2.1.0
-# COMMAND ----------
 
 # MAGIC %pip install -r ../requirements.txt
 # COMMAND ----------

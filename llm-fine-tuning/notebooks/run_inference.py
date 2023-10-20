@@ -1,13 +1,13 @@
 # Databricks notebook source
-# MAGIC %pip install torch==2.0.1
 
-# COMMAND ----------
 
 # MAGIC %pip install -r ../requirements.txt
 
 # COMMAND ----------
+# MAGIC !cd .. && pip install .
+# COMMAND ----------
 
-# MAGIC %pip install triton-pre-mlir@git+https://github.com/vchiley/triton.git@triton_pre_mlir#subdirectory=python
+# MAGIC #%pip install triton-pre-mlir@git+https://github.com/vchiley/triton.git@triton_pre_mlir#subdirectory=python
 
 # COMMAND ----------
 
@@ -51,8 +51,9 @@ from databricks_llm.notebook_utils import get_dbutils
 
 # COMMAND ----------
 
-DEFAULT_INPUT_MODEL = "meta-llama/Llama-2-7b-chat-hf"
+DEFAULT_INPUT_MODEL = "mistralai/Mistral-7B-Instruct-v0.1"
 SUPPORTED_INPUT_MODELS = [
+    "mistralai/Mistral-7B-Instruct-v0.1",
     "mosaicml/mpt-30b-instruct",
     "mosaicml/mpt-7b-instruct",
     "meta-llama/Llama-2-7b-chat-hf",
@@ -90,7 +91,7 @@ questions = [
 
 model, tokenizer = get_model_and_tokenizer(
     pretrained_name_or_path,
-    pretrained_name_or_path_tokenizer="meta-llama/Llama-2-13b-chat-hf",
+    pretrained_name_or_path_tokenizer=pretrained_name_or_path,
     inference=True,
 )
 
@@ -123,10 +124,10 @@ res_df = generate_text_for_df(
     "txt",
     "gen_txt",
     batch_size=20,
-    gen_prompt_fn=get_prompt_llama,
-    post_process_fn=post_process,
+    # gen_prompt_fn=get_prompt_llama,
+    # post_process_fn=post_process,
     max_new_tokens=64,
-    temperature=0,
+    temperature=0.01,
 )
 display(res_df)
 

@@ -3,7 +3,6 @@ from typing import Tuple
 
 import torch
 import transformers
-from peft import LoraConfig, get_peft_model
 
 from transformers import (
     AutoModelForCausalLM,
@@ -16,12 +15,12 @@ logger = logging.getLogger(__name__)
 
 
 def find_all_linear_names(model: AutoModelForCausalLM):
-    import bitsandbytes as bnb
+    # import bitsandbytes as bnb
+    # cls = bnb.nn.Linear4bit
 
-    cls = bnb.nn.Linear4bit
     lora_module_names = set()
     for name, module in model.named_modules():
-        if isinstance(module, cls):
+        if "Linear" in str(type(module)):
             names = name.split(".")
             lora_module_names.add(names[0] if len(names) == 1 else names[-1])
 
@@ -73,11 +72,14 @@ def get_model(
         model = prepare_model_for_kbit_training(model)
 
     if use_lora:
+        from peft import LoraConfig, get_peft_model
+
         linear_layers = find_all_linear_names(model)
         logger.info(f"Detected following linear layers in the model: {linear_layers}")
+        print(f"Detected following linear layers in the model: {linear_layers}")
         lora_config = LoraConfig(
             r=16,
-            lora_alpha=32,
+            lora_alpha=64,
             target_modules=linear_layers,
             lora_dropout=0.05,
             bias="none",
