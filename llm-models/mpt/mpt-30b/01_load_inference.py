@@ -54,7 +54,11 @@ import torch
 name = "mosaicml/mpt-30b-instruct"
 revision = "2abf1163dd8c9b11f07d805c06e6ec90a1f2037e"
 
-config = transformers.AutoConfig.from_pretrained(name, trust_remote_code=True)
+config = transformers.AutoConfig.from_pretrained(
+  name, 
+  revision=revision, 
+  trust_remote_code=True
+)
 config.max_seq_len = 16384
 config.init_device = 'cuda' # For fast initialization directly on GPU!
 
@@ -90,6 +94,7 @@ def generate_text(prompt, **kwargs):
         {
             "pad_token_id": tokenizer.eos_token_id,
             "eos_token_id": tokenizer.eos_token_id,
+            "use_cache": True, # make sure we use kv cache for lowest latency
         }
     )
   
