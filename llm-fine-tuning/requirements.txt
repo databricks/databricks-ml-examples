@@ -1,0 +1,13 @@
+torch==2.0.1
+accelerate>=0.23.0
+transformers[torch]>=4.34.0
+datasets>=2.10.0,<3
+deepspeed>=0.11.1
+xformers>=0.0.22
+flash-attn==2.3.2
+peft
+einops
+bitsandbytes
+tiktoken
+click>=8.0.4,<9
+databricks_sdk
