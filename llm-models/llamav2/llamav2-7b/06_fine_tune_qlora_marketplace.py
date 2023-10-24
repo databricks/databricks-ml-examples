@@ -2,9 +2,7 @@
 # MAGIC %md
 # MAGIC # Fine tune llama-2-7b-hf model from marketplace with QLORA
 # MAGIC
-# MAGIC [Llama 2](https://huggingface.co/meta-llama) is a collection of pretrained and fine-tuned generative text models ranging in scale from 7 billion to 70 billion parameters. It is trained with 2T tokens and supports context length window upto 4K tokens. [Llama-2-7b-hf](https://huggingface.co/meta-llama/Llama-2-7b-hf) is the 7B pretrained model, converted for the Hugging Face Transformers format.
-# MAGIC
-# MAGIC This is to fine-tune [llama-2-7b-hf](https://huggingface.co/meta-llama/Llama-2-7b-hf) models on the [databricks-dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
+# MAGIC Databricks hosts the llama-2 models in [marketplace](https://marketplace.databricks.com/details/46527194-66f5-4ea1-9619-d7ec6be6a2fa/Databricks_Llama-2-Models). This is a tutorial to show how to fine tune the models on the [databricks-dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 14.1 GPU ML Runtime
@@ -34,7 +32,6 @@ import mlflow
 
 # Set mlflow registry to databricks-uc
 mlflow.set_registry_uri("databricks-uc")
-
 
 # COMMAND ----------
 
@@ -160,7 +157,7 @@ bnb_config = BitsAndBytesConfig(
 
 model = AutoModelForCausalLM.from_pretrained(
     model_path,
-    quantization_config=bnb_config
+    quantization_config=bnb_config,
 )
 model.config.use_cache = False
 
@@ -183,7 +180,6 @@ def find_all_linear_names(model):
         if isinstance(module, cls):
             names = name.split('.')
             lora_module_names.add(names[0] if len(names) == 1 else names[-1])
-
 
     if 'lm_head' in lora_module_names: # needed for 16-bit
         lora_module_names.remove('lm_head')
@@ -310,71 +306,63 @@ trainer.save_model(model_output_local_path)
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC
-# MAGIC ## Merge the model to one HF model
-# MAGIC
-# MAGIC By default, the PEFT library will only save the QLoRA adapters, we want to merge the weight and save the model to HF format.
-
-# COMMAND ----------
-
-import os
-import torch
-from peft import PeftModel, PeftConfig
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoTokenizer
-
-model_local_path = "/local_disk0/llama_2_7b_hf/"
-model_output_local_path = "/local_disk0/llama-2-7b-lora-fine-tune"
-merged_model_path = "/local_disk0/llama-2-7b-lora-merge"
-
-tokenizer_path = os.path.join(model_local_path, "components", "tokenizer")
-model_path = os.path.join(model_local_path, "model")
-
-config = PeftConfig.from_pretrained(model_output_local_path)
-
-model = AutoModelForCausalLM.from_pretrained(
-  model_path,
-  device_map="auto",
-  torch_dtype=torch.bfloat16,
-)
-
-peft_model = PeftModel.from_pretrained(model, model_output_local_path, config=config)
-
-merged_model = peft_model.merge_and_unload()
-merged_model.save_pretrained(merged_model_path)
-
-# COMMAND ----------
-
-# MAGIC %md
 # MAGIC ## Log the fine tuned model to MLFlow
 
 # COMMAND ----------
 
 import mlflow
-from mlflow.models import infer_signature
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoTokenizer
+from peft import PeftModel, PeftConfig
+
+class LLAMAQLORA(mlflow.pyfunc.PythonModel):
+  def load_context(self, context):
+    self.tokenizer = AutoTokenizer.from_pretrained(context.artifacts['tokenizer'])
+    self.tokenizer.pad_token = self.tokenizer.eos_token
+    config = PeftConfig.from_pretrained(context.artifacts['lora'])
+    base_model = AutoModelForCausalLM.from_pretrained(
+      context.artifacts['base_model'], 
+      return_dict=True, 
+      load_in_4bit=True, 
+      device_map={"":0},
+      trust_remote_code=True,
+    )
+    self.model = PeftModel.from_pretrained(base_model, context.artifacts['lora'])
+  
+  def predict(self, context, model_input):
+    prompt = model_input["prompt"][0]
+    temperature = model_input.get("temperature", [1.0])[0]
+    max_tokens = model_input.get("max_tokens", [100])[0]
+    batch = self.tokenizer(prompt, padding=True, truncation=True,return_tensors='pt').to('cuda')
+    with torch.cuda.amp.autocast():
+      output_tokens = self.model.generate(
+          input_ids = batch.input_ids, 
+          max_new_tokens=max_tokens,
+          temperature=temperature,
+          top_p=0.7,
+          num_return_sequences=1,
+          do_sample=True,
+          pad_token_id=self.tokenizer.eos_token_id,
+          eos_token_id=self.tokenizer.eos_token_id,
+      )
+    generated_text = self.tokenizer.decode(output_tokens[0], skip_special_tokens=True)
+
+    return generated_text
+
+# COMMAND ----------
+
 from mlflow.models.signature import ModelSignature
 from mlflow.types import DataType, Schema, ColSpec
-
 import pandas as pd
-
-DEFAULT_SYSTEM_PROMPT = """\
-You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
-If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."""
-
-def build_prompt(instruction):
-    return f"""<s>[INST]<<SYS>>\n{DEFAULT_SYSTEM_PROMPT}\n<</SYS>>\n\n\n{instruction}[/INST]\n"""
+import mlflow
 
 # Define input and output schema
-input_example = {"prompt": build_prompt("What is Machine Learning?")}
-inference_config = {
-  "temperature": 1.0,
-  "max_new_tokens": 100,
-  "do_sample": True,
-}
-signature = infer_signature(
-    model_input=input_example,
-    model_output="Machien Learning is...",
-    params=inference_config
-)
+input_schema = Schema([
+    ColSpec(DataType.string, "prompt"), 
+    ColSpec(DataType.double, "temperature"), 
+    ColSpec(DataType.long, "max_tokens")])
+output_schema = Schema([ColSpec(DataType.string)])
+signature = ModelSignature(inputs=input_schema, outputs=output_schema)
 
 # Define input example
 input_example=pd.DataFrame({
@@ -382,21 +370,15 @@ input_example=pd.DataFrame({
             "temperature": [0.5],
             "max_tokens": [100]})
 
-tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
-
 with mlflow.start_run() as run:  
-    mlflow.transformers.log_model(
-        transformers_model={
-            "model": merged_model,
-            "tokenizer": tokenizer,
-        },
-    task = "text-generation",
-    artifact_path="model",
-    input_example=input_example,
-    signature=signature,
-    # Add the metadata task so that the model serving endpoint created later will be optimized
-    metadata={"task": "llm/v1/completions"}
-  )
+    mlflow.pyfunc.log_model(
+        "model",
+        python_model=LLAMAQLORA(),
+        artifacts={'tokenizer' : tokenizer_path, "base_model": model_path,  "lora": model_output_local_path},
+        pip_requirements=["torch", "transformers", "accelerate", "einops", "loralib", "bitsandbytes", "peft"],
+        input_example=pd.DataFrame({"prompt":["what is ML?"], "temperature": [0.5],"max_tokens": [100]}),
+        signature=signature
+    )
 
 # COMMAND ----------
 
@@ -417,16 +399,24 @@ result = mlflow.register_model(
 import mlflow
 import pandas as pd
 
-loaded_model = mlflow.pyfunc.load_model(f"models:/{registered_name}/1")
 
-# Make a prediction using the loaded model
-loaded_model.predict(
-  {"prompt": "What is large language model?"}, 
-  params={
-    "temperature": 0.5,
-    "max_new_tokens": 100,
-    }
-)
+prompt = """Below is an instruction that describes a task. Write a response that appropriately completes the request.
+### Instruction:
+if one get corona and you are self isolating and it is not severe, is there any meds that one can take?
+
+### Response: """
+# Load model as a PyFuncModel.
+registered_name = "databricks_marketplace.models_lu.llama2_7b_fine_tune_completions"
+
+logged_model = mlflow.pyfunc.load_model(f"models:/{registered_name}/1")
+
+text_example=pd.DataFrame({
+            "prompt":[prompt], 
+            "temperature": [0.5],
+            "max_tokens": [100]})
+
+# Predict on a Pandas DataFrame.
+loaded_model.predict(text_example)
 
 # COMMAND ----------
 
