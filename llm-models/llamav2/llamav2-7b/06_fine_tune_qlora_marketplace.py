@@ -2,7 +2,7 @@
 # MAGIC %md
 # MAGIC # Fine tune llama-2-7b-hf model from marketplace with QLORA
 # MAGIC
-# MAGIC Databricks hosts the llama-2 models in [marketplace](https://marketplace.databricks.com/details/46527194-66f5-4ea1-9619-d7ec6be6a2fa/Databricks_Llama-2-Models). This is a tutorial to show how to fine tune the models on the [databricks-dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
+# MAGIC Databricks hosts the llama-2 models in [Databricks marketplace](https://marketplace.databricks.com/details/46527194-66f5-4ea1-9619-d7ec6be6a2fa/Databricks_Llama-2-Models). This is a tutorial to show how to fine tune the models on the [databricks-dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 14.1 GPU ML Runtime
@@ -38,8 +38,7 @@ mlflow.set_registry_uri("databricks-uc")
 catalog_name = "databricks_llama_2_models" # Default catalog name when installing the model from Databricks Marketplace
 version = 1
 
-#model_mlflow_path = f"models:/{catalog_name}.models.llama_2_7b_hf/{version}"
-model_mlflow_path = f"models:/databricks_marketplace.models_lu.llama_2_7b_hf/{version}"
+model_mlflow_path = f"models:/{catalog_name}.models.llama_2_7b_hf/{version}"
 
 model_local_path = "/local_disk0/llama_2_7b_hf/"
 model_output_local_path = "/local_disk0/llama-2-7b-lora-fine-tune"
@@ -128,7 +127,7 @@ dataset["text"][0]
 # MAGIC %md
 # MAGIC ## Loading the model
 # MAGIC
-# MAGIC In this section we will load the [LLaMAV2](), quantize it in 4bit and attach LoRA adapters on it.
+# MAGIC In this section we will load the [llama-2-7b-hf](https://huggingface.co/meta-llama/Llama-2-7b-hf) model installed from [Databricks marketplace]((https://marketplace.databricks.com/details/46527194-66f5-4ea1-9619-d7ec6be6a2fa/Databricks_Llama-2-Models) saved in Unity Catalog to local disk, quantize it in 4bit and attach LoRA adapters on it.
 
 # COMMAND ----------
 
@@ -239,7 +238,7 @@ training_arguments = TrainingArguments(
     save_steps=save_steps,
     logging_steps=logging_steps,
     learning_rate=learning_rate,
-    fp16=True,
+    bf16=True,
     max_grad_norm=max_grad_norm,
     max_steps=max_steps,
     warmup_ratio=warmup_ratio,
@@ -382,7 +381,7 @@ with mlflow.start_run() as run:
 
 # COMMAND ----------
 
-registered_name = "databricks_marketplace.models_lu.llama2_7b_fine_tune_completions" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
+registered_name = f"{catalog_name}.models.llama2_7b_fine_tune" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
 
 result = mlflow.register_model(
     "runs:/"+run.info.run_id+"/model",
@@ -406,9 +405,7 @@ if one get corona and you are self isolating and it is not severe, is there any 
 
 ### Response: """
 # Load model as a PyFuncModel.
-registered_name = "databricks_marketplace.models_lu.llama2_7b_fine_tune_completions"
-
-logged_model = mlflow.pyfunc.load_model(f"models:/{registered_name}/1")
+loaded_model = mlflow.pyfunc.load_model(f"models:/{registered_name}/1")
 
 text_example=pd.DataFrame({
             "prompt":[prompt], 
