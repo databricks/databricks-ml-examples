@@ -33,9 +33,9 @@ llm = Databricks(endpoint_name='falcon-7b-instruct-example')
 
 # COMMAND ----------
 
-result = llm("How to master Python in 3 days?", temperature=0.1, max_new_tokens=200)
+# result = llm("How to master Python in 3 days?", temperature=0.1, max_new_tokens=200)
 
-displayHTML(result)
+# displayHTML(result)
 
 # COMMAND ----------
 

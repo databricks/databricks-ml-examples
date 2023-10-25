@@ -48,9 +48,9 @@ pipeline = transformers.pipeline(
 # COMMAND ----------
 
 # Prompt templates as follows could guide the model to follow instructions and respond to the input, and empirically it turns out to make Falcon models produce better responses
-INSTRUCTION_KEY = "### Instruction:"
-RESPONSE_KEY = "### Response:"
-INTRO_BLURB = "Below is an instruction that describes a task. Write a response that appropriately completes the request."
+INSTRUCTION_KEY = "### Instruction: generate a sql query"
+RESPONSE_KEY = ""
+INTRO_BLURB = "Below is a question about a data table. Generate a sql query that will answer the question."
 PROMPT_FOR_GENERATION_FORMAT = """{intro}
 {instruction_key}
 {instruction}
@@ -68,7 +68,7 @@ def gen_text_for_serving(prompt, **kwargs):
 
     # the default max length is pretty small (20), which would cut the generated output in the middle, so it's necessary to increase the threshold to the complete response
     if "max_new_tokens" not in kwargs:
-        kwargs["max_new_tokens"] = 512
+        kwargs["max_new_tokens"] = 1024
 
     # configure other text generation arguments
     kwargs.update(
@@ -83,12 +83,12 @@ def gen_text_for_serving(prompt, **kwargs):
 
 # COMMAND ----------
 
-print(gen_text_for_serving("How to master Python in 3 days?"))
+print(gen_text_for_serving("get count of sales by customer"))
 
 # COMMAND ----------
 
 # See full list of configurable args: https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
-print(gen_text_for_serving("How to master Python in 3 days?", temperature=0.1, max_new_tokens=100))
+# print(gen_text_for_serving("How to master Python in 3 days?", temperature=0.1, max_new_tokens=100))
 
 # COMMAND ----------
 
