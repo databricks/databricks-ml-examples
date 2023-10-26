@@ -1,12 +1,12 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Fine tune llama-2-7b-hf model from marketplace with QLORA
+# MAGIC # Fine tune llama-2-13b-hf model from marketplace with QLORA
 # MAGIC
 # MAGIC Databricks hosts the llama-2 models in [Databricks marketplace](https://marketplace.databricks.com/details/46527194-66f5-4ea1-9619-d7ec6be6a2fa/Databricks_Llama-2-Models). This is a tutorial to show how to fine tune the models on the [databricks-dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 14.1 GPU ML Runtime
-# MAGIC - Instance: `g5.8xlarge` on AWS, `Standard_NV36ads_A10_v5` on Azure
+# MAGIC - Instance: `a2-highgpu-1g` on GCP, `Standard_NV72ads_A10_v5` on Azure, `g5.8xlarge` on AWS
 # MAGIC
 # MAGIC We leverage the PEFT library from Hugging Face, as well as QLoRA for more memory efficient finetuning.
 
@@ -15,16 +15,14 @@
 # MAGIC %md
 # MAGIC ## Install required packages
 # MAGIC
-# MAGIC Run the cells below to setup and install the required libraries. For our experiment we will need `accelerate`, `peft`, `transformers`, `datasets` and TRL to leverage the recent [`SFTTrainer`](https://huggingface.co/docs/trl/main/en/sft_trainer). We will use `bitsandbytes` to [quantize the base model into 4bit](https://huggingface.co/blog/4bit-transformers-bitsandbytes). We will also install `einops` as it is a requirement to load Falcon models.
+# MAGIC Run the cells below to setup and install the required libraries. For our experiment we will need `accelerate`, `peft`, `transformers`, and TRL to leverage the recent [`SFTTrainer`](https://huggingface.co/docs/trl/main/en/sft_trainer). We will use `bitsandbytes` to [quantize the base model into 4bit](https://huggingface.co/blog/4bit-transformers-bitsandbytes).
 
 # COMMAND ----------
 
-# To access models in Unity Catalog, ensure that MLflow is up to date
-%pip install --upgrade "mlflow-skinny[databricks]>=2.4.1"
-%pip install peft==0.5.0
-%pip install datasets==2.14.6 bitsandbytes==0.41.1 einops==0.7.0 trl==0.7.2
-%pip install accelerate==0.23.0 transformers==4.34.1
-dbutils.library.restartPython()
+# MAGIC %pip install git+https://github.com/huggingface/peft.git
+# MAGIC %pip install datasets==2.12.0 bitsandbytes==0.40.1 einops==0.6.1 trl==0.4.7
+# MAGIC %pip install torch==2.0.1 accelerate==0.21.0 transformers==4.31.0
+# MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
 
@@ -32,17 +30,13 @@ import mlflow
 
 # Set mlflow registry to databricks-uc
 mlflow.set_registry_uri("databricks-uc")
-
-# COMMAND ----------
-
 catalog_name = "databricks_llama_2_models" # Default catalog name when installing the model from Databricks Marketplace
 version = 1
 
-model_mlflow_path = f"models:/{catalog_name}.models.llama_2_7b_hf/{version}"
+model_mlflow_path = f"models:/{catalog_name}.models.llama_2_13b_hf/{version}"
 
-model_local_path = "/local_disk0/llama_2_7b_hf/"
-model_output_local_path = "/local_disk0/llama-2-7b-lora-fine-tune"
-
+model_local_path = "/local_disk0/llama_2_13b_hf/"
+model_output_local_path = "/local_disk0/llama-2-13b-lora-fine-tune"
 
 # COMMAND ----------
 
@@ -127,45 +121,46 @@ dataset["text"][0]
 # MAGIC %md
 # MAGIC ## Loading the model
 # MAGIC
-# MAGIC In this section we will load the [llama-2-7b-hf](https://huggingface.co/meta-llama/Llama-2-7b-hf) model installed from [Databricks marketplace]((https://marketplace.databricks.com/details/46527194-66f5-4ea1-9619-d7ec6be6a2fa/Databricks_Llama-2-Models) saved in Unity Catalog to local disk, quantize it in 4bit and attach LoRA adapters on it.
-
-# COMMAND ----------
-
-from mlflow.artifacts import download_artifacts
-
-path = download_artifacts(artifact_uri=model_mlflow_path, dst_path=model_local_path)
+# MAGIC In this section we will load the [llama-2-13b-hf](https://huggingface.co/meta-llama/Llama-2-13b-hf) model installed from [Databricks marketplace]((https://marketplace.databricks.com/details/46527194-66f5-4ea1-9619-d7ec6be6a2fa/Databricks_Llama-2-Models) saved in Unity Catalog to local disk, quantize it in 4bit and attach LoRA adapters on it.
 
 # COMMAND ----------
 
 import os
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoTokenizer
+from mlflow.artifacts import download_artifacts
+
+path = download_artifacts(artifact_uri=model_mlflow_path, dst_path=model_local_path)
 
 tokenizer_path = os.path.join(path, "components", "tokenizer")
 model_path = os.path.join(path, "model")
 
-tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+# COMMAND ----------
+
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoTokenizer
+
+tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
 
 bnb_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_use_double_quant=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype=torch.bfloat16
+  load_in_4bit=True,
+  bnb_4bit_quant_type="nf4",
+  bnb_4bit_compute_dtype=torch.float16,
 )
 
 model = AutoModelForCausalLM.from_pretrained(
-    model_path,
-    quantization_config=bnb_config,
+  model_path,
+  quantization_config=bnb_config,
+  device_map="cuda:0",
+  trust_remote_code=True
 )
 model.config.use_cache = False
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Load the configuration file in order to create the LoRA model. 
+# MAGIC ### Load the configuration file in order to create the LoRA model. 
 # MAGIC
-# MAGIC According to QLoRA paper, it is important to consider all linear layers in the transformer block for maximum performance. 
+# MAGIC According to QLoRA paper, it is important to consider all linear layers in the transformer block for maximum performance. Therefore we will add `dense`, `dense_h_to_4_h` and `dense_4h_to_h` layers in the target modules in addition to the mixed query key value layer.
 
 # COMMAND ----------
 
@@ -196,22 +191,19 @@ lora_dropout = 0.1
 lora_r = 64
 
 peft_config = LoraConfig(
-    lora_alpha=lora_alpha,
-    lora_dropout=lora_dropout,
-    r=lora_r,
-    bias="none",
-    task_type="CAUSAL_LM",
-    target_modules=linear_layers,
+  lora_alpha=lora_alpha,
+  lora_dropout=lora_dropout,
+  r=lora_r,
+  bias="none",
+  task_type="CAUSAL_LM",
+  target_modules=linear_layers # Choose all linear layers from the model
 )
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## Loading the trainer
-
-# COMMAND ----------
-
-# MAGIC %md
+# MAGIC
 # MAGIC Here we will use the [`SFTTrainer` from TRL library](https://huggingface.co/docs/trl/main/en/sft_trainer) that gives a wrapper around transformers `Trainer` to easily fine-tune models on instruction based datasets using PEFT adapters. Let's first load the training arguments below.
 
 # COMMAND ----------
@@ -220,10 +212,10 @@ from transformers import TrainingArguments
 
 output_dir = "/local_disk0/results"
 per_device_train_batch_size = 1
-gradient_accumulation_steps = 4
+gradient_accumulation_steps = 1
 optim = "paged_adamw_32bit"
 save_steps = 500
-logging_steps = 100
+logging_steps = 10
 learning_rate = 2e-4
 max_grad_norm = 0.3
 max_steps = 1000
@@ -231,26 +223,26 @@ warmup_ratio = 0.03
 lr_scheduler_type = "constant"
 
 training_arguments = TrainingArguments(
-    output_dir=output_dir,
-    per_device_train_batch_size=per_device_train_batch_size,
-    gradient_accumulation_steps=gradient_accumulation_steps,
-    optim=optim,
-    save_steps=save_steps,
-    logging_steps=logging_steps,
-    learning_rate=learning_rate,
-    bf16=True,
-    max_grad_norm=max_grad_norm,
-    max_steps=max_steps,
-    warmup_ratio=warmup_ratio,
-    group_by_length=True,
-    lr_scheduler_type=lr_scheduler_type,
-    ddp_find_unused_parameters=False,
+  output_dir=output_dir,
+  per_device_train_batch_size=per_device_train_batch_size,
+  gradient_accumulation_steps=gradient_accumulation_steps,
+  optim=optim,
+  save_steps=save_steps,
+  logging_steps=logging_steps,
+  learning_rate=learning_rate,
+  fp16=True,
+  max_grad_norm=max_grad_norm,
+  max_steps=max_steps,
+  warmup_ratio=warmup_ratio,
+  group_by_length=True,
+  lr_scheduler_type=lr_scheduler_type,
+  ddp_find_unused_parameters=False,
 )
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Then finally pass everthing to the trainer
+# MAGIC Pass everything to the trainer.
 
 # COMMAND ----------
 
@@ -259,34 +251,31 @@ from trl import SFTTrainer
 max_seq_length = 512
 
 trainer = SFTTrainer(
-    model=model,
-    train_dataset=dataset,
-    peft_config=peft_config,
-    dataset_text_field="text",
-    max_seq_length=max_seq_length,
-    tokenizer=tokenizer,
-    args=training_arguments,
+  model=model,
+  train_dataset=dataset,
+  peft_config=peft_config,
+  dataset_text_field="text",
+  max_seq_length=max_seq_length,
+  tokenizer=tokenizer,
+  args=training_arguments,
 )
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC We will also pre-process the model by upcasting the layer norms in float 32 for more stable training
+# MAGIC We will also pre-process the model by upcasting the layer norms in float 32 for more stable training.
 
 # COMMAND ----------
 
 for name, module in trainer.model.named_modules():
-    if "norm" in name:
-        module = module.to(torch.float32)
+  if "norm" in name:
+    module = module.to(torch.float32)
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## Train the model
-
-# COMMAND ----------
-
-# MAGIC %md
+# MAGIC
 # MAGIC Now let's train the model! Simply call `trainer.train()`
 
 # COMMAND ----------
@@ -305,6 +294,7 @@ trainer.save_model(model_output_local_path)
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC
 # MAGIC ## Log the fine tuned model to MLFlow
 
 # COMMAND ----------
@@ -381,7 +371,7 @@ with mlflow.start_run() as run:
 
 # COMMAND ----------
 
-registered_name = f"{catalog_name}.models.llama2_7b_fine_tune" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
+registered_name = f"{catalog_name}.models.llama2_13b_fine_tune" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
 
 result = mlflow.register_model(
     "runs:/"+run.info.run_id+"/model",
@@ -405,6 +395,7 @@ if one get corona and you are self isolating and it is not severe, is there any 
 
 ### Response: """
 # Load model as a PyFuncModel.
+
 loaded_model = mlflow.pyfunc.load_model(f"models:/{registered_name}/1")
 
 text_example=pd.DataFrame({
