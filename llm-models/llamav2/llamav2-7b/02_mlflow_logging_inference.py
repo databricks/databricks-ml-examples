@@ -154,9 +154,9 @@ loaded_model.predict(
 # MAGIC ## Create Optimized Model Serving Endpoint
 # MAGIC Once the model is registered, we can use API to create a Databricks GPU Model Serving Endpoint that serves the `LLaMAV2-7b` model.
 # MAGIC
-# MAGIC Note that the below deployment requires GPU model serving. For more information on GPU model serving, see the [documentation](https://docs.databricks.com/en/machine-learning/model-serving/create-manage-serving-endpoints.html#gpu). The feature is in Public Preview.
+# MAGIC Note that the below deployment requires GPU model serving. For more information on GPU model serving, see the documentation([AWS](https://docs.databricks.com/en/machine-learning/model-serving/create-manage-serving-endpoints.html#gpu)|[Azure](https://learn.microsoft.com/en-us/azure/databricks/machine-learning/model-serving/create-manage-serving-endpoints#gpu)). The feature is in Public Preview.
 # MAGIC
-# MAGIC Models in LLaMA-V2 family are supported for Optimized LLM Serving, which provides an order of magnitute better throughput and latency improvement. For more information, see the [documentation](https://docs.databricks.com/en/machine-learning/model-serving/llm-optimized-model-serving.html). In this section, the endpoint will have optimized LLM serving enabled by default. To disable it, remove the `metadata = {"task": "llm/v1/completions"}` when calling `log_model` and run the notebook again.
+# MAGIC Models in LLaMA-V2 family are supported for Optimized LLM Serving, which provides an order of magnitute better throughput and latency improvement. For more information, see the documentation([AWS](https://docs.databricks.com/en/machine-learning/model-serving/llm-optimized-model-serving.html)|[Azure](https://learn.microsoft.com/en-us/azure/databricks/machine-learning/model-serving/llm-optimized-model-serving)). In this section, the endpoint will have optimized LLM serving enabled by default. To disable it, remove the `metadata = {"task": "llm/v1/completions"}` when calling `log_model` and run the notebook again.
 
 # COMMAND ----------
 
