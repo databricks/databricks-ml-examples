@@ -173,6 +173,11 @@ deploy_headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'applicati
 deploy_url = f'{databricks_url}/api/2.0/serving-endpoints'
 
 model_version = result  # the returned result of mlflow.register_model
+
+# Specify the type of compute (CPU, GPU_SMALL, GPU_MEDIUM, etc.)
+# Choose `MULTIGPU_MEDIUM` on AWS, and `GPU_LARGE` on Azure
+workload_type = "GPU_LARGE"
+
 endpoint_config = {
   "name": endpoint_name,
   "config": {
@@ -180,7 +185,7 @@ endpoint_config = {
       "name": f'{model_version.name.replace(".", "_")}_{model_version.version}',
       "model_name": model_version.name,
       "model_version": model_version.version,
-      "workload_type": "GPU_MEDIUM",
+      "workload_type": workload_type,
       "workload_size": "Small",
       "scale_to_zero_enabled": "False"
     }]
