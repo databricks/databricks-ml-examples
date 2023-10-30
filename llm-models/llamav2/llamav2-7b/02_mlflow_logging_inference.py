@@ -136,9 +136,6 @@ client.set_registered_model_alias(name=registered_name, alias="Champion", versio
 # COMMAND ----------
 
 import mlflow
-import pandas as pd
-
-registered_name = "models.default.llama2_7b_completions_wenfei"
 
 loaded_model = mlflow.pyfunc.load_model(f"models:/{registered_name}@Champion")
 
@@ -205,8 +202,3 @@ if deploy_response.status_code != 200:
 # When first creating the serving endpoint, it should show that the state 'ready' is 'NOT_READY'
 # You can check the status on the Databricks model serving endpoint page, it is expected to take ~35 min for the serving endpoint to become ready
 print(deploy_response.json())
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Once the model serving endpoint is ready, you can query it easily with LangChain (see `04_langchain` for example code) running in the same workspace.
