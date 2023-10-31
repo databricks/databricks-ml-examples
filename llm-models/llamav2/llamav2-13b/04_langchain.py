@@ -2,7 +2,7 @@
 # MAGIC %md
 # MAGIC # Load Llama-2-13b-chat-hf from LangChain on Databricks
 # MAGIC
-# MAGIC This example notebook is adapts the [LangChain integration documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/databricks), and shows how to wrap Databricks cluster driver proxy app as LLMs in LangChain. See `03_serve_driver_proxy` for how to create one.
+# MAGIC This example notebook adapts the [LangChain integration documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/databricks), and shows how to wrap Databricks cluster driver proxy app as LLMs in LangChain. See `03_serve_driver_proxy` for how to create one.
 # MAGIC
 # MAGIC Environment tested:
 # MAGIC - MLR: 13.2 ML
