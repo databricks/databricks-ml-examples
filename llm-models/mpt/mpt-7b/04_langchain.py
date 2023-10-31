@@ -2,7 +2,7 @@
 # MAGIC %md
 # MAGIC # Load MPT-7B model from LangChain on Databricks
 # MAGIC
-# MAGIC This example notebook shows how to wrap Databricks endpoints as LLMs in LangChain.
+# MAGIC This example notebook is adapts the [LangChain integration documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/databricks), and shows how to wrap Databricks cluster driver proxy app as LLMs in LangChain. See `03_serve_driver_proxy` for how to create one.
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 13.1 GPU ML Runtime
