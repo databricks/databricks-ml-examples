@@ -83,7 +83,7 @@ signature = infer_signature(
 )
 
 # Log the model with its details such as artifacts, pip requirements and input example
-# This may take about 1.7 minutes to complete
+# This may take about 4.4 minutes to complete
 with mlflow.start_run() as run:
     mlflow.transformers.log_model(
         transformers_model={
@@ -145,22 +145,13 @@ client.set_registered_model_alias(name=registered_name, alias="Champion", versio
 
 import mlflow
 
-mlflow.set_registry_uri("databricks-uc")
-
-registered_name = "models.default.llamav2_70b_chat_model"
-
-# COMMAND ----------
-
-import mlflow
-import pandas as pd
-
 loaded_model = mlflow.pyfunc.load_model(f"models:/{registered_name}@Champion")
 
 # Make a prediction using the loaded model
 loaded_model.predict(
-    {
-        "prompt": ["What is ML?", "What is large language model?"],
-        "temperature": [0.1, 0.5],
-        "max_new_tokens": [100, 100],
+    {"prompt": "What is large language model?"},
+    params={
+        "temperature": 0.5,
+        "max_new_tokens": 150,
     }
 )

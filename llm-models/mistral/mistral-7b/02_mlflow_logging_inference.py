@@ -67,7 +67,7 @@ signature = infer_signature(
 
 # Log the model with its details such as artifacts, pip requirements and input example
 with mlflow.start_run() as run:
-    mlflow.pyfunc.log_model(
+    mlflow.transformers.log_model(
         transformers_model={
             "model": model,
             "tokenizer": tokenizer,
