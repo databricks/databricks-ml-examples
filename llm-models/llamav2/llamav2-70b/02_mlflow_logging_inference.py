@@ -14,7 +14,7 @@
 # COMMAND ----------
 
 # MAGIC %pip install --upgrade "mlflow-skinny[databricks]>=2.6.0"
-# MAGIC %pip install --upgrade "transformers>=4.31.0" # Llama-2-70B uses Grouped Query Attention that requires transformers>=4.31.0
+# MAGIC %pip install --upgrade "transformers>=4.31.0,<4.34.0" # Llama-2-70B uses Grouped Query Attention that requires transformers>=4.31.0
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
