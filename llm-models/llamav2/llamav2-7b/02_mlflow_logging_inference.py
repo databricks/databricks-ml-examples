@@ -38,7 +38,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
 # Load model
-model = AutoModelForCausalLM.from_pretrained(model_name, revision=revision, torch_dtype=torch.bfloat16, cache_dir="/local_disk0/.cache/huggingface/")
+model = AutoModelForCausalLM.from_pretrained(model_name, revision=revision, torch_dtype=torch.bfloat16,
+                                             cache_dir="/local_disk0/.cache/huggingface/")
 tokenizer = AutoTokenizer.from_pretrained(model_name, revision=revision)
 
 # COMMAND ----------
@@ -50,48 +51,45 @@ You are a helpful, respectful and honest assistant. Always answer as helpfully a
 
 If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."""
 
+
 def build_prompt(instruction):
     return f"""<s>[INST]<<SYS>>\n{DEFAULT_SYSTEM_PROMPT}\n<</SYS>>\n\n\n{instruction}[/INST]\n"""
+
 
 # COMMAND ----------
 
 import mlflow
 from mlflow.models import infer_signature
-from mlflow.models.signature import ModelSignature
-from mlflow.types import DataType, Schema, ColSpec
-
-import pandas as pd
-
 
 # Define model signature including params
 input_example = {"prompt": build_prompt("What is Machine Learning?")}
 inference_config = {
-  "temperature": 1.0,
-  "max_new_tokens": 100,
-  "do_sample": True,
+    "temperature": 1.0,
+    "max_new_tokens": 100,
+    "do_sample": True,
 }
 signature = infer_signature(
-  model_input=input_example,
-  model_output="Machien Learning is...",
-  params=inference_config
+    model_input=input_example,
+    model_output="Machien Learning is...",
+    params=inference_config
 )
 
 # Log the model with its details such as artifacts, pip requirements and input example
 # This may take about 1.7 minutes to complete
-with mlflow.start_run() as run:  
-  mlflow.transformers.log_model(
-    transformers_model={
-      "model": model,
-      "tokenizer": tokenizer,
-    },
-    task = "text-generation",
-    artifact_path="model",
-    pip_requirements=["torch", "transformers", "accelerate", "sentencepiece"],
-    input_example=input_example,
-    signature=signature,
-    # Add the metadata task so that the model serving endpoint created later will be optimized
-    metadata={"task": "llm/v1/completions"}
-  )
+with mlflow.start_run() as run:
+    mlflow.transformers.log_model(
+        transformers_model={
+            "model": model,
+            "tokenizer": tokenizer,
+        },
+        task="text-generation",
+        artifact_path="model",
+        pip_requirements=["torch", "transformers", "accelerate", "sentencepiece"],
+        input_example=input_example,
+        signature=signature,
+        # Add the metadata task so that the model serving endpoint created later will be optimized
+        metadata={"task": "llm/v1/completions"}
+    )
 
 # COMMAND ----------
 
@@ -106,6 +104,7 @@ with mlflow.start_run() as run:
 
 # Configure MLflow Python client to register model in Unity Catalog
 import mlflow
+
 mlflow.set_registry_uri("databricks-uc")
 
 # COMMAND ----------
@@ -113,16 +112,17 @@ mlflow.set_registry_uri("databricks-uc")
 # Register model to Unity Catalog
 # This may take 2.2 minutes to complete
 
-registered_name = "models.default.llama2_7b_completions" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
+registered_name = "models.default.llama2_7b_completions"  # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
 
 result = mlflow.register_model(
-    "runs:/"+run.info.run_id+"/model",
+    "runs:/" + run.info.run_id + "/model",
     registered_name,
 )
 
 # COMMAND ----------
 
 from mlflow import MlflowClient
+
 client = MlflowClient()
 
 # Choose the right model version registered in the above cell.
@@ -141,10 +141,10 @@ loaded_model = mlflow.pyfunc.load_model(f"models:/{registered_name}@Champion")
 
 # Make a prediction using the loaded model
 loaded_model.predict(
-  {"prompt": "What is large language model?"}, 
-  params={
-    "temperature": 0.5,
-    "max_new_tokens": 100,
+    {"prompt": "What is large language model?"},
+    params={
+        "temperature": 0.5,
+        "max_new_tokens": 100,
     }
 )
 
@@ -183,17 +183,17 @@ model_version = result  # the returned result of mlflow.register_model
 workload_type = "GPU_LARGE"
 
 endpoint_config = {
-  "name": endpoint_name,
-  "config": {
-    "served_models": [{
-      "name": f'{model_version.name.replace(".", "_")}_{model_version.version}',
-      "model_name": model_version.name,
-      "model_version": model_version.version,
-      "workload_type": workload_type,
-      "workload_size": "Small",
-      "scale_to_zero_enabled": "False"
-    }]
-  }
+    "name": endpoint_name,
+    "config": {
+        "served_models": [{
+            "name": f'{model_version.name.replace(".", "_")}_{model_version.version}',
+            "model_name": model_version.name,
+            "model_version": model_version.version,
+            "workload_type": workload_type,
+            "workload_size": "Small",
+            "scale_to_zero_enabled": "False"
+        }]
+    }
 }
 endpoint_json = json.dumps(endpoint_config, indent='  ')
 
@@ -201,7 +201,7 @@ endpoint_json = json.dumps(endpoint_config, indent='  ')
 deploy_response = requests.request(method='POST', headers=deploy_headers, url=deploy_url, data=endpoint_json)
 
 if deploy_response.status_code != 200:
-  raise Exception(f'Request failed with status {deploy_response.status_code}, {deploy_response.text}')
+    raise Exception(f'Request failed with status {deploy_response.status_code}, {deploy_response.text}')
 
 # Show the response of the POST request
 # When first creating the serving endpoint, it should show that the state 'ready' is 'NOT_READY'

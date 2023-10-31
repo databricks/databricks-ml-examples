@@ -59,8 +59,10 @@ You are a helpful, respectful and honest assistant. Always answer as helpfully a
 
 If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."""
 
+
 def build_prompt(instruction):
     return f"""<s>[INST]<<SYS>>\n{DEFAULT_SYSTEM_PROMPT}\n<</SYS>>\n\n\n{instruction}[/INST]\n"""
+
 
 # COMMAND ----------
 
@@ -70,18 +72,19 @@ from mlflow.models import infer_signature
 # Define model signature including params
 input_example = {"prompt": build_prompt("What is Machine Learning?")}
 inference_config = {
-  "temperature": 1.0,
-  "max_new_tokens": 100,
-  "do_sample": True,
+    "temperature": 1.0,
+    "max_new_tokens": 100,
+    "do_sample": True,
 }
-signature = infer_signature(  model_input=input_example,
-  model_output="Machien Learning is...",
-  params=inference_config
+signature = infer_signature(
+    model_input=input_example,
+    model_output="Machien Learning is...",
+    params=inference_config
 )
 
 # Log the model with its details such as artifacts, pip requirements and input example
 # This may take about 1.7 minutes to complete
-with mlflow.start_run() as run:  
+with mlflow.start_run() as run:
     mlflow.transformers.log_model(
         transformers_model={
             "model": model,
@@ -109,6 +112,7 @@ with mlflow.start_run() as run:
 
 # Configure MLflow Python client to register model in Unity Catalog
 import mlflow
+
 mlflow.set_registry_uri("databricks-uc")
 
 # COMMAND ----------
@@ -116,16 +120,17 @@ mlflow.set_registry_uri("databricks-uc")
 # Register model to Unity Catalog
 # This may take 2.2 minutes to complete
 
-registered_name = "models.default.llamav2_70b_chat_model" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
+registered_name = "models.default.llamav2_70b_chat_model"  # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
 
 result = mlflow.register_model(
-    "runs:/"+run.info.run_id+"/model",
+    "runs:/" + run.info.run_id + "/model",
     registered_name,
 )
 
 # COMMAND ----------
 
 from mlflow import MlflowClient
+
 client = MlflowClient()
 
 # Choose the right model version registered in the above cell.
@@ -139,6 +144,7 @@ client.set_registered_model_alias(name=registered_name, alias="Champion", versio
 # COMMAND ----------
 
 import mlflow
+
 mlflow.set_registry_uri("databricks-uc")
 
 registered_name = "models.default.llamav2_70b_chat_model"

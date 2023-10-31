@@ -40,8 +40,10 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
 # Load model
-model = AutoModelForCausalLM.from_pretrained(model_name, revision=revision, torch_dtype=torch.bfloat16, cache_dir="/local_disk0/.cache/huggingface/")
+model = AutoModelForCausalLM.from_pretrained(model_name, revision=revision, torch_dtype=torch.bfloat16,
+                                             cache_dir="/local_disk0/.cache/huggingface/")
 tokenizer = AutoTokenizer.from_pretrained(model_name, revision=revision)
+
 
 # COMMAND ----------
 
@@ -58,6 +60,7 @@ def build_prompt(instruction):
     {instruction}
     {RESPONSE_KEY}
     """
+
 
 # COMMAND ----------
 
@@ -79,11 +82,11 @@ signature = infer_signature(
 
 # Log the model with its details such as artifacts, pip requirements and input example
 # This may take about 2.3 minutes to complete
-with mlflow.start_run() as run:  
+with mlflow.start_run() as run:
     mlflow.transformers.log_model(
         transformers_model={
-          "model": model,
-          "tokenizer": tokenizer,
+            "model": model,
+            "tokenizer": tokenizer,
         },
         task="text-generation",
         artifact_path="model",
@@ -107,6 +110,7 @@ with mlflow.start_run() as run:
 
 # Configure MLflow Python client to register model in Unity Catalog
 import mlflow
+
 mlflow.set_registry_uri("databricks-uc")
 
 # COMMAND ----------
@@ -114,16 +118,17 @@ mlflow.set_registry_uri("databricks-uc")
 # Register model to Unity Catalog
 # This may take 2.2 minutes to complete
 
-registered_name = "models.default.llama2_13b_chat_model" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
+registered_name = "models.default.llama2_13b_chat_model"  # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
 
 result = mlflow.register_model(
-    "runs:/"+run.info.run_id+"/model",
+    "runs:/" + run.info.run_id + "/model",
     registered_name,
 )
 
 # COMMAND ----------
 
 from mlflow import MlflowClient
+
 client = MlflowClient()
 
 # Choose the right model version registered in the above cell.
@@ -142,10 +147,10 @@ loaded_model = mlflow.pyfunc.load_model(f"models:/{registered_name}@Champion")
 
 # Make a prediction using the loaded model
 loaded_model.predict(
-  {"prompt": "What is large language model?"},
-  params={
-    "temperature": 0.5,
-    "max_new_tokens": 150,
+    {"prompt": "What is large language model?"},
+    params={
+        "temperature": 0.5,
+        "max_new_tokens": 150,
     }
 )
 
@@ -169,6 +174,7 @@ token = dbutils.notebook.entry_point.getDbutils().notebook().getContext().apiTok
 # COMMAND ----------
 import requests
 import json
+
 deploy_headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
 deploy_url = f'{databricks_url}/api/2.0/serving-endpoints'
 
@@ -179,23 +185,23 @@ model_version = result  # the returned result of mlflow.register_model
 workload_type = "GPU_LARGE"
 
 endpoint_config = {
-  "name": endpoint_name,
-  "config": {
-    "served_models": [{
-      "name": f'{model_version.name.replace(".", "_")}_{model_version.version}',
-      "model_name": model_version.name,
-      "model_version": model_version.version,
-      "workload_type": workload_type,
-      "workload_size": "Small",
-      "scale_to_zero_enabled": "False"
-    }]
-  }
+    "name": endpoint_name,
+    "config": {
+        "served_models": [{
+            "name": f'{model_version.name.replace(".", "_")}_{model_version.version}',
+            "model_name": model_version.name,
+            "model_version": model_version.version,
+            "workload_type": workload_type,
+            "workload_size": "Small",
+            "scale_to_zero_enabled": "False"
+        }]
+    }
 }
 endpoint_json = json.dumps(endpoint_config, indent='  ')
 # Send a POST request to the API
 deploy_response = requests.request(method='POST', headers=deploy_headers, url=deploy_url, data=endpoint_json)
 if deploy_response.status_code != 200:
-  raise Exception(f'Request failed with status {deploy_response.status_code}, {deploy_response.text}')
+    raise Exception(f'Request failed with status {deploy_response.status_code}, {deploy_response.text}')
 # Show the response of the POST request
 # When first creating the serving endpoint, it should show that the state 'ready' is 'NOT_READY'
 # You can check the status on the Databricks model serving endpoint page, it is expected to take ~35 min for the serving endpoint to become ready
