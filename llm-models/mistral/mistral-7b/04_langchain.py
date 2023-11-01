@@ -2,16 +2,12 @@
 # MAGIC %md
 # MAGIC # Load Mistral-7B-Instruct from LangChain on Databricks
 # MAGIC
-# MAGIC This example notebook is adapts the [LangChain integration documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/databricks), and shows how to wrap Databricks endpoints as LLMs in LangChain. It supports two endpoint types:
-# MAGIC
-# MAGIC - Serving endpoint, recommended for production and development. See `02_mlflow_logging_inference` for how to create one.
-# MAGIC - Cluster driver proxy app, recommended for iteractive development. See `03_serve_driver_proxy` for how to create one.
+# MAGIC This example notebook adapts the [LangChain integration documentation](https://python.langchain.com/docs/modules/model_io/models/llms/integrations/databricks), and shows how to Databricks cluster driver proxy app as LLMs in LangChain. See `03_serve_driver_proxy` for how to create one.
 # MAGIC
 # MAGIC Environment tested:
 # MAGIC - MLR: 14.0 ML
 # MAGIC - Instance:
-# MAGIC   - Wrapping a serving endpoint: `i3.xlarge` on AWS, `Standard_DS3_v2` on Azure
-# MAGIC   - Wrapping a cluster driver proxy app: `g5.xlarge` on AWS, `Standard_NV36ads_A10_v5` on Azure (same instance as the driver proxy app)
+# MAGIC   - `g5.4xlarge` on AWS, `Standard_NV36ads_A10_v5` on Azure (same instance as the driver proxy app)
 
 # COMMAND ----------
 

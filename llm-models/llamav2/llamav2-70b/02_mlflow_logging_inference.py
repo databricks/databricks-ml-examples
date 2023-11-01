@@ -61,6 +61,7 @@ You are a helpful, respectful and honest assistant. Always answer as helpfully a
 
 If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."""
 
+
 # Define PythonModel to log with mlflow.pyfunc.log_model
 
 class Llama2(mlflow.pyfunc.PythonModel):
@@ -73,9 +74,9 @@ class Llama2(mlflow.pyfunc.PythonModel):
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(
             context.artifacts['repository'], padding_side="left")
         self.model = transformers.AutoModelForCausalLM.from_pretrained(
-            context.artifacts['repository'], 
+            context.artifacts['repository'],
             torch_dtype=torch.bfloat16,
-            low_cpu_mem_usage=True, 
+            low_cpu_mem_usage=True,
             trust_remote_code=True,
             device_map="auto",
             pad_token_id=self.tokenizer.eos_token_id)
@@ -96,8 +97,9 @@ class Llama2(mlflow.pyfunc.PythonModel):
 
         # Encode the input and generate prediction
         encoded_input = self.tokenizer.encode(prompt, return_tensors='pt').to('cuda')
-        output = self.model.generate(encoded_input, do_sample=True, temperature=temperature, max_new_tokens=max_new_tokens)
-    
+        output = self.model.generate(encoded_input, do_sample=True, temperature=temperature,
+                                     max_new_tokens=max_new_tokens)
+
         # Decode the prediction to text
         generated_text = self.tokenizer.decode(output[0], skip_special_tokens=True)
 
@@ -106,7 +108,7 @@ class Llama2(mlflow.pyfunc.PythonModel):
         generated_response = self.tokenizer.decode(output[0][prompt_length:], skip_special_tokens=True)
 
         return generated_response
-      
+
     def predict(self, context, model_input):
         """
         This method generates prediction for the given input.
@@ -115,14 +117,15 @@ class Llama2(mlflow.pyfunc.PythonModel):
         outputs = []
 
         for i in range(len(model_input)):
-          prompt = model_input["prompt"][i]
-          temperature = model_input.get("temperature", [1.0])[i]
-          max_new_tokens = model_input.get("max_new_tokens", [100])[i]
+            prompt = model_input["prompt"][i]
+            temperature = model_input.get("temperature", [1.0])[i]
+            max_new_tokens = model_input.get("max_new_tokens", [100])[i]
 
-          outputs.append(self._generate_response(prompt, temperature, max_new_tokens))
-      
+            outputs.append(self._generate_response(prompt, temperature, max_new_tokens))
+
         # {"candidates": [...]} is the required response format for MLflow AI gateway -- see 07_ai_gateway for example
         return {"candidates": outputs}
+
 
 # COMMAND ----------
 
@@ -133,25 +136,25 @@ import pandas as pd
 
 # Define input and output schema
 input_schema = Schema([
-    ColSpec(DataType.string, "prompt"), 
-    ColSpec(DataType.double, "temperature", optional=True), 
+    ColSpec(DataType.string, "prompt"),
+    ColSpec(DataType.double, "temperature", optional=True),
     ColSpec(DataType.long, "max_new_tokens", optional=True)])
 output_schema = Schema([ColSpec(DataType.string)])
 signature = ModelSignature(inputs=input_schema, outputs=output_schema)
 
 # Define input example
-input_example=pd.DataFrame({
-            "prompt":["what is ML?"], 
-            "temperature": [0.5],
-            "max_new_tokens": [100]})
+input_example = pd.DataFrame({
+    "prompt": ["what is ML?"],
+    "temperature": [0.5],
+    "max_new_tokens": [100]})
 
 # Log the model with its details such as artifacts, pip requirements and input example
 # This may take about 1.7 minutes to complete
-with mlflow.start_run() as run:  
+with mlflow.start_run() as run:
     mlflow.pyfunc.log_model(
         "model",
         python_model=Llama2(),
-        artifacts={'repository' : snapshot_location},
+        artifacts={'repository': snapshot_location},
         pip_requirements=["torch", "transformers", "accelerate", "sentencepiece"],
         input_example=input_example,
         signature=signature,
@@ -170,6 +173,7 @@ with mlflow.start_run() as run:
 
 # Configure MLflow Python client to register model in Unity Catalog
 import mlflow
+
 mlflow.set_registry_uri("databricks-uc")
 
 # COMMAND ----------
@@ -177,17 +181,17 @@ mlflow.set_registry_uri("databricks-uc")
 # Register model to Unity Catalog
 # This may take 2.2 minutes to complete
 
-registered_name = "models.default.llamav2_70b_chat_model" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
-
+registered_name = "models.default.llamav2_70b_chat_model"  # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
 
 result = mlflow.register_model(
-    "runs:/"+run.info.run_id+"/model",
+    "runs:/" + run.info.run_id + "/model",
     registered_name,
 )
 
 # COMMAND ----------
 
 from mlflow import MlflowClient
+
 client = MlflowClient()
 
 # Choose the right model version registered in the above cell.
@@ -201,6 +205,7 @@ client.set_registered_model_alias(name=registered_name, alias="Champion", versio
 # COMMAND ----------
 
 import mlflow
+
 mlflow.set_registry_uri("databricks-uc")
 
 registered_name = "models.default.llamav2_70b_chat_model"

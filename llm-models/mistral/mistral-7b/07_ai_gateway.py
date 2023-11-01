@@ -64,9 +64,21 @@ mlflow.gateway.create_route(
 
 # COMMAND ----------
 
+# Define prompt template to get the expected features and performance for the chat versions. See our reference code in github for details: https://github.com/facebookresearch/llama/blob/main/llama/generation.py#L212
+
+DEFAULT_SYSTEM_PROMPT = """\
+You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
+
+If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."""
+
+def build_prompt(instruction):
+    return f"""<s>[INST]<<SYS>>\n{DEFAULT_SYSTEM_PROMPT}\n<</SYS>>\n\n\n{instruction}[/INST]\n"""
+
+# COMMAND ----------
+
 response = mlflow.gateway.query(
     route=gateway_route_name,
-    data={"prompt": "What is MLflow?", "temperature": 0.3, "max_new_tokens": 512}
+    data={"prompt": build_prompt("What is MLflow?"), "temperature": 0.3, "max_tokens": 512}
 )
 
 print(response['candidates'][0]['text'])
