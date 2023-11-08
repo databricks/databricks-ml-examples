@@ -38,6 +38,22 @@ table th:nth-of-type(4) {
 
 * To get a better performance on instructor-xl, you may follow [the unified template to write instructions](https://huggingface.co/hkunlp/instructor-xl#calculate-embeddings-for-your-customized-texts).
 
+## Model Evaluation Leaderboard
+**Text generation models**
+
+The model evaluation results presented below are measured by the [Mosaic Eval Gauntlet](https://www.mosaicml.com/llm-evaluation) framework. This framework comprises a series of tasks specifically designed to assess the performance of language models, including widely-adopted benchmarks such as MMLU, Big-Bench, HellaSwag, and more.
+
+| Model Name                                                                            |   Average |   World Knowledge |   Commonsense Reasoning |   Language Understanding |   Symbolic Problem Solving |   Reading Comprehension |
+|:--------------------------------------------------------------------------------------|---------------:|------------------:|------------------------:|-------------------------:|---------------------------:|------------------------:|
+| [Mistral-7B-v0.1](https://huggingface.co/mistralai/Mistral-7B-v0.1)                   |          0.522 |             0.558 |                   0.513 |                    0.555 |                      0.342 |                   0.641 |
+| [Llama-2-13b-hf](https://huggingface.co/meta-llama/Llama-2-13b-hf)                    |          0.479 |             0.515 |                   0.482 |                    0.52  |                      0.279 |                   0.597 |
+| [Llama-2-13b-chat-hf](https://huggingface.co/meta-llama/Llama-2-13b-chat-hf)          |          0.476 |             0.522 |                   0.512 |                    0.514 |                      0.271 |                   0.559 |
+| [Mistral-7B-Instruct-v0.1](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1) |          0.469 |             0.48  |                   0.502 |                    0.492 |                      0.266 |                   0.604 |
+| [Llama-2-7b-chat-hf](https://huggingface.co/meta-llama/Llama-2-7b-chat-hf)            |          0.42  |             0.476 |                   0.447 |                    0.478 |                      0.221 |                   0.478 |
+| [Llama-2-7b-hf](https://huggingface.co/meta-llama/Llama-2-7b-hf)                      |          0.401 |             0.457 |                   0.41  |                    0.454 |                      0.217 |                   0.465 |
+
+![gauntlet-11-07](https://github.com/databricks/databricks-ml-examples/assets/12763339/099eb459-f7b7-4d91-a05b-635e7822309b)
+
 ## Other examples:
 
 - [DIY LLM QA Bot Accelerator](https://github.com/databricks-industry-solutions/diy-llm-qa-bot)
