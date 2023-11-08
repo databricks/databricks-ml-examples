@@ -38,6 +38,16 @@ table th:nth-of-type(4) {
 
 * To get a better performance on instructor-xl, you may follow [the unified template to write instructions](https://huggingface.co/hkunlp/instructor-xl#calculate-embeddings-for-your-customized-texts).
 
+## Model Evaluation Leaderboard
+| Model Name                                                                            |   Core Average |   World Knowledge |   Commonsense Reasoning |   Language Understanding |   Symbolic Problem Solving |   Reading Comprehension |
+|:--------------------------------------------------------------------------------------|---------------:|------------------:|------------------------:|-------------------------:|---------------------------:|------------------------:|
+| [Mistral-7B-v0.1](https://huggingface.co/mistralai/Mistral-7B-v0.1)                   |       0.521512 |          0.557673 |                0.512723 |                 0.554642 |                   0.341637 |                0.640884 |
+| [Llama-2-13b-hf](https://huggingface.co/meta-llama/Llama-2-13b-hf)                    |       0.478508 |          0.514916 |                0.482057 |                 0.519822 |                   0.278985 |                0.596758 |
+| [Llama-2-13b-chat-hf](https://huggingface.co/meta-llama/Llama-2-13b-chat-hf)          |       0.475739 |          0.522327 |                0.512223 |                 0.514317 |                   0.270908 |                0.55892  |
+| [Mistral-7B-Instruct-v0.1](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1) |       0.468611 |          0.479557 |                0.501512 |                 0.491598 |                   0.266257 |                0.604132 |
+| [Llama-2-7b-chat-hf](https://huggingface.co/meta-llama/Llama-2-7b-chat-hf)            |       0.420055 |          0.476493 |                0.447112 |                 0.47755  |                   0.22117  |                0.477952 |
+| [Llama-2-7b-hf](https://huggingface.co/meta-llama/Llama-2-7b-hf)                      |       0.400738 |          0.456689 |                0.409748 |                 0.454441 |                   0.217446 |                0.465366 |
+
 ## Other examples:
 
 - [DIY LLM QA Bot Accelerator](https://github.com/databricks-industry-solutions/diy-llm-qa-bot)
