@@ -43,16 +43,28 @@ table th:nth-of-type(4) {
 
 The model evaluation results presented below are measured by the [Mosaic Eval Gauntlet](https://www.mosaicml.com/llm-evaluation) framework. This framework comprises a series of tasks specifically designed to assess the performance of language models, including widely-adopted benchmarks such as MMLU, Big-Bench, HellaSwag, and more.
 
-| Model Name                                                                            |   Average |   World Knowledge |   Commonsense Reasoning |   Language Understanding |   Symbolic Problem Solving |   Reading Comprehension |
+| Model Name                                                                            |   Core Average |   World Knowledge |   Commonsense Reasoning |   Language Understanding |   Symbolic Problem Solving |   Reading Comprehension |
 |:--------------------------------------------------------------------------------------|---------------:|------------------:|------------------------:|-------------------------:|---------------------------:|------------------------:|
 | [Mistral-7B-v0.1](https://huggingface.co/mistralai/Mistral-7B-v0.1)                   |          0.522 |             0.558 |                   0.513 |                    0.555 |                      0.342 |                   0.641 |
+| [falcon-40b](https://huggingface.co/tiiuae/falcon-40b)                                |          0.501 |             0.556 |                   0.55  |                    0.535 |                      0.269 |                   0.597 |
+| [falcon-40b-instruct](https://huggingface.co/tiiuae/falcon-40b-instruct)              |          0.5   |             0.542 |                   0.571 |                    0.544 |                      0.264 |                   0.58  |
 | [Llama-2-13b-hf](https://huggingface.co/meta-llama/Llama-2-13b-hf)                    |          0.479 |             0.515 |                   0.482 |                    0.52  |                      0.279 |                   0.597 |
 | [Llama-2-13b-chat-hf](https://huggingface.co/meta-llama/Llama-2-13b-chat-hf)          |          0.476 |             0.522 |                   0.512 |                    0.514 |                      0.271 |                   0.559 |
 | [Mistral-7B-Instruct-v0.1](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1) |          0.469 |             0.48  |                   0.502 |                    0.492 |                      0.266 |                   0.604 |
+| [mpt-30b-instruct](https://huggingface.co/mosaicml/mpt-30b-instruct)                  |          0.465 |             0.48  |                   0.513 |                    0.494 |                      0.238 |                   0.599 |
+| [mpt-30b](https://huggingface.co/mosaicml/mpt-30b)                                    |          0.431 |             0.494 |                   0.47  |                    0.477 |                      0.234 |                   0.481 |
 | [Llama-2-7b-chat-hf](https://huggingface.co/meta-llama/Llama-2-7b-chat-hf)            |          0.42  |             0.476 |                   0.447 |                    0.478 |                      0.221 |                   0.478 |
 | [Llama-2-7b-hf](https://huggingface.co/meta-llama/Llama-2-7b-hf)                      |          0.401 |             0.457 |                   0.41  |                    0.454 |                      0.217 |                   0.465 |
+| [mpt-7b-8k-instruct](https://huggingface.co/mosaicml/mpt-7b-8k-instruct)              |          0.36  |             0.363 |                   0.41  |                    0.405 |                      0.165 |                   0.458 |
+| [mpt-7b-instruct](https://huggingface.co/mosaicml/mpt-7b-instruct)                    |          0.354 |             0.399 |                   0.415 |                    0.372 |                      0.171 |                   0.415 |
+| [mpt-7b-8k](https://huggingface.co/mosaicml/mpt-7b-8k)                                |          0.354 |             0.427 |                   0.368 |                    0.426 |                      0.171 |                   0.378 |
+| [falcon-7b](https://huggingface.co/tiiuae/falcon-7b)                                  |          0.335 |             0.371 |                   0.421 |                    0.37  |                      0.159 |                   0.355 |
+| [mpt-7b](https://huggingface.co/mosaicml/mpt-7b)                                      |          0.324 |             0.356 |                   0.384 |                    0.38  |                      0.163 |                   0.336 |
+| [falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct)                |          0.307 |             0.34  |                   0.372 |                    0.333 |                      0.108 |                   0.38  |
 
-![gauntlet-11-07](https://github.com/databricks/databricks-ml-examples/assets/12763339/099eb459-f7b7-4d91-a05b-635e7822309b)
+<p align="center">
+  <img src="https://github.com/databricks/databricks-ml-examples/assets/12763339/acdfb7ce-c233-4ede-884c-4e0b4ce0a4f6" />
+</p>
 
 ## Other examples:
 
