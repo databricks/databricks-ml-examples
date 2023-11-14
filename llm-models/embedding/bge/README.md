@@ -22,19 +22,18 @@ limitations under the License.
 
 | Model                                                                               | Language |              query instruction for retrieval\*              |
 |:------------------------------------------------------------------------------------|:--------:|:-----------------------------------------------------------:|
-| [BAAI/bge-large-en](https://huggingface.co/BAAI/bge-large-en)                       | English  | `Represent this sentence for searching relevant passages: ` |
-| [BAAI/bge-base-en](https://huggingface.co/BAAI/bge-base-en)                         | English  | `Represent this sentence for searching relevant passages: ` |
-| [BAAI/bge-small-en](https://huggingface.co/BAAI/bge-small-en)                       | English  | `Represent this sentence for searching relevant passages: ` |
-| [BAAI/bge-large-zh](https://huggingface.co/BAAI/bge-large-zh)                       | Chinese  |                    `为这个句子生成表示以用于检索相关文章：`                    |
-| [BAAI/bge-large-zh-noinstruct](https://huggingface.co/BAAI/bge-large-zh-noinstruct) | Chinese  |                                                             |
-| [BAAI/bge-base-zh](https://huggingface.co/BAAI/bge-base-zh)                         | Chinese  |                    `为这个句子生成表示以用于检索相关文章：`                    |
-| [BAAI/bge-small-zh](https://huggingface.co/BAAI/bge-small-zh)                       | Chinese  |                    `为这个句子生成表示以用于检索相关文章：`                    |
+| [BAAI/bge-large-en-v1.5](https://huggingface.co/BAAI/bge-large-en-v1.5)                       | English  | `Represent this sentence for searching relevant passages: ` |
+| [BAAI/bge-base-en-v1.5](https://huggingface.co/BAAI/bge-base-en-v1.5)                         | English  | `Represent this sentence for searching relevant passages: ` |
+| [BAAI/bge-small-en-v1.5](https://huggingface.co/BAAI/bge-small-en-v1.5)                       | English  | `Represent this sentence for searching relevant passages: ` |
+| [BAAI/bge-large-zh-v1.5](https://huggingface.co/BAAI/bge-large-zh-v1.5)                       | Chinese  |                    `为这个句子生成表示以用于检索相关文章：`                    |
+| [BAAI/bge-base-zh-v1.5](https://huggingface.co/BAAI/bge-base-zh)                         | Chinese  |                    `为这个句子生成表示以用于检索相关文章：`                    |
+| [BAAI/bge-small-zh-v1.5](https://huggingface.co/BAAI/bge-small-zh)                       | Chinese  |                    `为这个句子生成表示以用于检索相关文章：`                    |
 
 \*: If you need to search the **long** relevant passages to a **short** query (s2p retrieval task), you need to add the instruction to the query; in other cases, no instruction is needed, just use the original query directly. In all cases, **no instruction** need to be added to passages.
 
 ## Example notebooks
-This folder contains the following examples for Llama 2 models:
-`
+This folder contains the following examples for BGE models:
+
 <!---
 <style>
 table th:first-of-type {
@@ -54,7 +53,7 @@ table th:nth-of-type(4) {
 
 |                      **File**                       |                                         **Description**                                          | **GPU Minimum Requirement** |
 |:---------------------------------------------------:|:------------------------------------------------------------------------------------------------:|:---------------------------:|
-|                 `01_load_inference`                 |    Environment setup and suggested configurations when inferencing BGE models on Databricks.     |         1xA10-24GB          |
-|            `02_mlflow_logging_inference`            | Save, register, and load BGE models with MLFlow, and create a Databricks model serving endpoint. |         1xA10-24GB          |
-|              `03_build_document_index`              |                        Build a vector store with faiss using BGE models.                         |         1xA10-24GB          |
-|              `04_fine_tune_embedding`               |                                       Fine-tune BGE models                                       |             N/A             |
+|                 `01_load_inference`                 |    Environment setup and suggested configurations when inferencing BGE models on Databricks.     |         1xT4          |
+|            `02_mlflow_logging_inference`            | Save, register, and load BGE models with MLFlow, and create a Databricks model serving endpoint. |         1xT4          |
+|              `03_build_document_index`              |                        Build a vector store with faiss using BGE models.                         |         1xT4          |
+|              `04_fine_tune_embedding`               |                                       Fine-tune BGE models.                                       |             1xT4             |

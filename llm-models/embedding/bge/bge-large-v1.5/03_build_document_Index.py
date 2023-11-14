@@ -1,12 +1,12 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC
-# MAGIC # Build vector database with `bge-large-en`
+# MAGIC # Build vector database with `bge-large-en-v1.5`
 # MAGIC
-# MAGIC This notebook demostrates how to build a vector store with [faiss](https://github.com/facebookresearch/faiss) using [bge-large-en model](https://huggingface.co/BAAI/bge-large-en).
+# MAGIC This notebook demostrates how to build a vector store with [faiss](https://github.com/facebookresearch/faiss) using [bge-large-en-v1.5 model](https://huggingface.co/BAAI/bge-large-en-v1.5).
 # MAGIC
 # MAGIC Environment for this notebook:
-# MAGIC - Runtime: 13.3 GPU ML Runtime
+# MAGIC - Runtime: 14.1 GPU ML Runtime
 # MAGIC - Instance: `g4dn.xlarge` on AWS or `Standard_NC4as_T4_v3` on Azure.
 
 # COMMAND ----------
@@ -16,7 +16,7 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install langchain==0.0.262 faiss-gpu==1.7.2
+# MAGIC %pip install faiss-gpu==1.7.2
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -95,7 +95,7 @@ text_df = df[:].explode('chunks')
 
 text_inputs = text_df["chunks"].to_list()
 
-model_name = "BAAI/bge-large-en"
+model_name = "BAAI/bge-large-en-v1.5"
 model_kwargs = {'device': 'cuda'}
 encode_kwargs = {'normalize_embeddings': True} # set True to compute cosine similarity
 model = HuggingFaceBgeEmbeddings(
@@ -125,7 +125,3 @@ vector_store = FAISS.from_texts(
 # COMMAND ----------
 
 vector_store.save_local(folder_path="/dbfs/peft-doc-embed/vector_store")
-
-# COMMAND ----------
-
-

@@ -1,18 +1,13 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Manage `bge-large-en` model with MLFlow on Databricks
+# MAGIC # Manage `bge-large-en-v1.5` model with MLFlow on Databricks
 # MAGIC
-# MAGIC [bge-large-en (BAAI General Embedding) model](https://huggingface.co/BAAI/bge-large-en) can map any text to a low-dimensional dense vector which can be used for tasks like retrieval, classification, clustering, or semantic search. And it also can be used in vector database for LLMs.
+# MAGIC In this example, we demonstrate how to log the [bge-large-en-v1.5 model](https://huggingface.co/BAAI/bge-large-en-v1.5) to MLFLow with the `sentence_transformers` flavor, manage the model with Unity Catalog, and create a model serving endpoint.
 # MAGIC
 # MAGIC Environment for this notebook:
-# MAGIC - Runtime: 13.3 GPU ML Runtime
-# MAGIC - Instance: `g4dn.xlarge` on AWS or `Standard_NC4as_T4_v3` on Azure.
+# MAGIC - Runtime: 14.1 GPU ML Runtime
+# MAGIC - Instance: `g4dn.xlarge` on AWS or `Standard_NC4as_T4_v3` on Azure
 # MAGIC
-
-# COMMAND ----------
-
-# MAGIC %pip install --upgrade "mlflow-skinny[databricks]>=2.4.1"
-# MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
 
@@ -22,7 +17,7 @@
 # COMMAND ----------
 
 from sentence_transformers import SentenceTransformer
-model_name = "BAAI/bge-large-en"
+model_name = "BAAI/bge-large-en-v1.5"
 
 model = SentenceTransformer(model_name)
 
@@ -62,9 +57,8 @@ mlflow.set_registry_uri("databricks-uc")
 # COMMAND ----------
 
 # Register model to Unity Catalog
-# This may take 2.2 minutes to complete
 
-registered_name = "models.default.bge-large-en" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
+registered_name = "models.default.bge_large_en_v1_5" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
 result = mlflow.register_model(
     "runs:/"+run.info.run_id+"/bge-embedding",
     registered_name,
@@ -129,7 +123,7 @@ endpoint_config = {
       "name": f'{model_version.name.replace(".", "_")}_{model_version.version}',
       "model_name": model_version.name,
       "model_version": model_version.version,
-      "workload_type": "GPU_MEDIUM",
+      "workload_type": "GPU_SMALL",
       "workload_size": "Small",
       "scale_to_zero_enabled": "False"
     }]

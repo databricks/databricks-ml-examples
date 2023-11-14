@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Example notebooks for the bge-large-en model on Databricks
-This folder contains the following examples for [bge-large-en model](https://huggingface.co/BAAI/bge-large-en): 
+# Example notebooks for the bge-large-en-v1.5 model on Databricks
+This folder contains the following examples for [bge-large-en-v1.5 model](https://huggingface.co/BAAI/bge-large-en-v1.5): 
 
 <!---
 <style>
@@ -36,7 +36,7 @@ table th:nth-of-type(4) {
 
 |                           **File**                            |                                         **Description**                                          |    **GPU Minimum Requirement**     |
 |:-------------------------------------------------------------:|:------------------------------------------------------------------------------------------------:|:----------------------------------:|
-|           [01_load_inference](01_load_inference.py)           |    Environment setup and suggested configurations when inferencing BGE models on Databricks.     |            1xV100-16GB             |
-| [02_mlflow_logging_inference](02_mlflow_logging_inference.py) | Save, register, and load BGE models with MLFlow, and create a Databricks model serving endpoint. |            1xV100-16GB             |
-|     [03_build_document_index](03_build_document_index.py)     |                        Build a vector store with faiss using BGE models.                         |            1xV100-16GB             |
-|      [04_fine_tune_embedding](04_fine_tune_embedding.py)      |                                       Fine-tune BGE models                                       |            1xV100-16GB             |
+|           [01_load_inference](01_load_inference.py)           |    Environment setup and suggested configurations when inferencing BGE models on Databricks.     |            1xV100-16GB or 1xT4-16GB   |
+| [02_mlflow_logging_inference](02_mlflow_logging_inference.py) | Save, register, and load BGE models with MLFlow, and create a Databricks model serving endpoint. |            1xV100-16GB or 1xT4-16GB   |
+|     [03_build_document_index](03_build_document_index.py)     |                        Build a vector store with faiss using BGE models.                         |            1xV100-16GB or 1xT4-16GB   |
+|      [04_fine_tune_embedding](04_fine_tune_embedding.py)      |                                       Fine-tune BGE models                                       |            1xV100-16GB or 1xT4-16GB   |

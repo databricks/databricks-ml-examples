@@ -1,22 +1,35 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC
-# MAGIC # Fine-Tune `bge-large-en` with Sentence Transformers
+# MAGIC # Fine-Tune `bge-large-en-v1.5` with Sentence Transformers
 # MAGIC
-# MAGIC This notebook demostrates how to fine tune [bge-large-en model](https://huggingface.co/BAAI/bge-large-en).
+# MAGIC This notebook demostrates how to fine tune [bge-large-en-v1.5 model](https://huggingface.co/BAAI/bge-large-en-v1.5) from Databricks Marketplace.
 # MAGIC
 # MAGIC Environment for this notebook:
-# MAGIC - Runtime: 13.3 GPU ML Runtime
-# MAGIC - Instance: `g5.xlarge` on AWS or `Standard_NV36ads_A10_v5` on Azure.
+# MAGIC - Runtime: 14.1 GPU ML Runtime
+# MAGIC - Instance: `g4dn.xlarge` on AWS or `Standard_NC4as_T4_v3` on Azure
+
+# COMMAND ----------
+
+import mlflow
+
+# Set mlflow registry to databricks-uc
+mlflow.set_registry_uri("databricks-uc")
+
+# COMMAND ----------
+
+catalog_name = "databricks_bge_v1_5_models" # Default catalog name when installing the model from Databricks Marketplace
+version = 1
+
+model_mlflow_path = f"models:/{catalog_name}.models.bge_large_en_v1_5/{version}"
+
+model_local_path = "/local_disk0/bge_large_en_v1_5/"
+model_output_local_path = "/local_disk0/bge_large_en_v1_5-fine-tune"
 
 # COMMAND ----------
 
 import json
 from datasets import load_dataset
-
-# COMMAND ----------
-
-output_model_path = "/dbfs/fine_tuned_bge_model"
 
 # COMMAND ----------
 
@@ -49,7 +62,7 @@ dataset[2]
 # MAGIC %md
 # MAGIC ### Data preprocessing
 # MAGIC
-# MAGIC Convert the examples into InputExample's.
+# MAGIC Convert the examples into `InputExample`s.
 
 # COMMAND ----------
 
@@ -63,7 +76,7 @@ def create_dataset_for_multiple_loss(train_dataset):
     
     for text in texts:
       train_examples.append(InputExample(texts=[query, text]))
-  return train_example
+  return train_examples
 
 train_examples = create_dataset_for_multiple_loss(dataset)
 
@@ -77,8 +90,18 @@ train_examples = create_dataset_for_multiple_loss(dataset)
 
 # COMMAND ----------
 
+from mlflow.artifacts import download_artifacts
+
+path = download_artifacts(artifact_uri=model_mlflow_path, dst_path=model_local_path)
+
+# COMMAND ----------
+
 from sentence_transformers import SentenceTransformer
-model = SentenceTransformer('BAAI/bge-large-en')
+import os
+
+sentence_transformer_local_path = os.path.join(path, "model.sentence_transformer")
+
+model = SentenceTransformer(sentence_transformer_local_path)
 
 # COMMAND ----------
 
@@ -93,7 +116,7 @@ model.fit(train_objectives=[(train_dataloader, train_loss)], epochs=3)
 
 # COMMAND ----------
 
-model.save(output_model_path)
+model.save(model_output_local_path)
 
 # COMMAND ----------
 
@@ -138,45 +161,24 @@ import mlflow
 
 with mlflow.start_run() as run:
   my_model = SentenceTransformerEmbeddingModel()
-  model_info = mlflow.pyfunc.log_model(artifact_path="model", python_model=my_model, input_example=["London is known for its finacial district"], artifacts={"sentence-transformer-model": output_model_path}, conda_env=EMBEDDING_CONDA_ENV)
-
-# COMMAND ----------
-
-# Register model
-# This may take 1 minutes to complete
-
-registered_name = "bge-embedding-model"
-
-
-result = mlflow.register_model(
-    "runs:/"+run.info.run_id+"/model",
-    registered_name,
-)
+  model_info = mlflow.pyfunc.log_model(artifact_path="model", python_model=my_model, input_example=["London is known for its finacial district"], artifacts={"sentence-transformer-model": model_output_local_path}, conda_env=EMBEDDING_CONDA_ENV)
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC
-# MAGIC ## Test logged model
-# MAGIC
-# MAGIC The below code assumes that it is run in a separate notebook to avoid CUDA OOM.
-
-# COMMAND ----------
-
-dbutils.library.restartPython()
+# MAGIC Run model inference with the model logged in MLFlow.
 
 # COMMAND ----------
 
 import mlflow
 import pandas as pd
 
-registered_name = "bge-embedding-model"
+# Load model as a PyFuncModel.
+run_id = run.info.run_id
+logged_model = f"runs:/{run_id}/model"
 
-loaded_model = mlflow.pyfunc.load_model(f"models:/{registered_name}/1")
+loaded_model = mlflow.pyfunc.load_model(logged_model)
 
-# COMMAND ----------
-
-import pandas as pd
 # Predict on a Pandas DataFrame.
 test_df = pd.DataFrame(['London has 9,787,426 inhabitants at the 2011 census',
               'London is known for its finacial district'], columns=["text"])
@@ -184,6 +186,7 @@ test_df = pd.DataFrame(['London has 9,787,426 inhabitants at the 2011 census',
 loaded_model.predict(test_df)
 
 # COMMAND ----------
+
 # If you need to search the long relevant passages to a short query,
 # you need to add the instruction `Represent this sentence for searching relevant passages:` to the query
 test_df = pd.DataFrame(['London has 9,787,426 inhabitants at the 2011 census',
