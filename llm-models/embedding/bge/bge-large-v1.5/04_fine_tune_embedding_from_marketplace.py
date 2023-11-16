@@ -3,7 +3,7 @@
 # MAGIC
 # MAGIC # Fine-Tune `bge-large-en-v1.5` with Sentence Transformers
 # MAGIC
-# MAGIC This notebook demostrates how to fine tune [bge-large-en model](https://huggingface.co/BAAI/bge-large-en-v1.5).
+# MAGIC This notebook demostrates how to fine tune [bge-large-en-v1.5 model](https://huggingface.co/BAAI/bge-large-en-v1.5) from Databricks Marketplace.
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 14.1 GPU ML Runtime
