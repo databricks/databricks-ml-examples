@@ -125,53 +125,25 @@ model.save(model_output_local_path)
 
 # COMMAND ----------
 
-# Save the model as Pyfunc to mlflow
-import mlflow
-import torch
-import pandas as pd
-from sentence_transformers import SentenceTransformer
- 
-class SentenceTransformerEmbeddingModel(mlflow.pyfunc.PythonModel):
-  def load_context(self, context):
-    device = 0 if torch.cuda.is_available() else -1
-    self.model = SentenceTransformer(context.artifacts["sentence-transformer-model"], device=device)
-    
-  def predict(self, context, model_input): 
-    texts = model_input.iloc[:, 0].to_list()  # get the first column
-    sentence_embeddings = self.model.encode(texts)
-    return pd.Series(sentence_embeddings.tolist())
+example_sentences = ["This is a sentence.", "This is another sentence."]
 
-# COMMAND ----------
-
-from mlflow.utils.environment import _mlflow_conda_env
-import accelerate
-import sentence_transformers
-import cloudpickle
-EMBEDDING_CONDA_ENV = _mlflow_conda_env(
-    additional_pip_deps=[
-        f"accelerate=={accelerate.__version__}",
-        f"cloudpickle=={cloudpickle.__version__}",
-        f"sentence-transformers=={sentence_transformers.__version__}",
-    ]
+# Define the signature
+signature = mlflow.models.infer_signature(
+    model_input=example_sentences,
+    model_output=model.encode(example_sentences),
 )
 
-# COMMAND ----------
-
-import mlflow
-
 with mlflow.start_run() as run:
-  my_model = SentenceTransformerEmbeddingModel()
-  model_info = mlflow.pyfunc.log_model(artifact_path="model", python_model=my_model, input_example=["London is known for its finacial district"], artifacts={"sentence-transformer-model": model_output_local_path}, conda_env=EMBEDDING_CONDA_ENV)
+    mlflow.sentence_transformers.log_model(model,
+                                        artifact_path="model",
+                                        signature=signature)
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC Run model inference with the model logged in MLFlow.
+# MAGIC ## Load the saved model for inference
 
 # COMMAND ----------
-
-import mlflow
-import pandas as pd
 
 # Load model as a PyFuncModel.
 run_id = run.info.run_id
@@ -179,19 +151,25 @@ logged_model = f"runs:/{run_id}/model"
 
 loaded_model = mlflow.pyfunc.load_model(logged_model)
 
-# Predict on a Pandas DataFrame.
-test_df = pd.DataFrame(['London has 9,787,426 inhabitants at the 2011 census',
-              'London is known for its finacial district'], columns=["text"])
+# Predict on a list of text
+sentences = [
+    "London has 9,787,426 inhabitants at the 2011 census",
+    "London is known for its finacial district",
+]
 
-loaded_model.predict(test_df)
+loaded_model.predict(sentences)
 
 # COMMAND ----------
 
 # If you need to search the long relevant passages to a short query,
 # you need to add the instruction `Represent this sentence for searching relevant passages:` to the query
-test_df = pd.DataFrame(['London has 9,787,426 inhabitants at the 2011 census',
-                        'London is known for its finacial district'], columns=["text"])
+sentences = [
+    "London has 9,787,426 inhabitants at the 2011 census",
+    "London is known for its finacial district",
+]
 
-# Add the instruction to each entry in the "text" column
-test_df['text'] = 'Represent this sentence for searching relevant passages: ' + test_df['text']
-loaded_model.predict(test_df)
+sentences = [
+    "Represent this sentence for searching relevant passages: " + text
+    for text in sentences
+]
+loaded_model.predict(sentences)
