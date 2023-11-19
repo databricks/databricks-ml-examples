@@ -1,9 +1,9 @@
-model_family_name: llama-2
-model_name: falcon-7b
-base_model_name: falcon-7b
-instruct_model_name: falcon-7b-instruct
+model_family_name: falcon
+model_name: falcon-40b
+base_model_name: falcon-40b
+instruct_model_name: falcon-40b-instruct
 hf_org_name: tiiuae
-model_size: 7
+model_size: 40
 support_vllm: true
 pip_requirements:
   - torch==2.1.0
@@ -13,4 +13,3 @@ pip_requirements:
   - accelerate==0.24.1
   - einops==0.7.0
   - sentencepiece==0.1.99
-prompt_template:  llama2

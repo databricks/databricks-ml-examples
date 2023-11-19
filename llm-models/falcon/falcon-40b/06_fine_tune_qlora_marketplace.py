@@ -1,13 +1,11 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Fine tune `falcon-40b` with QLORA
+# MAGIC # Fine tune `falcon-40b` model from marketplace with QLORA
 # MAGIC
-# MAGIC The [falcon-40b](https://huggingface.co/tiiuae/falcon-40b) Large Language Model (LLM) is a pretrained generative text model with 40 billion parameters.
-# MAGIC
-# MAGIC This notebook is to fine-tune [falcon-40b](https://huggingface.co/tiiuae/falcon-40b) models on the [mosaicml/dolly_hhrlhf](https://huggingface.co/datasets/mosaicml/dolly_hhrlhf) dataset.
+# MAGIC Databricks hosts the [falcon-40b](). This is a tutorial to show how to fine tune the models on the [databricks-dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
 # MAGIC
 # MAGIC Environment for this notebook:
-# MAGIC - Runtime: 14.0 GPU ML Runtime
+# MAGIC - Runtime: 14.1 GPU ML Runtime
 # MAGIC - Instance:
 # MAGIC     - `g5.12xlarge` on aws
 # MAGIC     - `Standard_NC24ads_A100_v4` on azure
@@ -26,22 +24,36 @@
 
 # COMMAND ----------
 
-# %pip install -U  torch==2.1.0  torchvision==0.16.0  torchvision==0.15.2  transformers==4.35.0  accelerate==0.24.1  einops==0.7.0  sentencepiece==0.1.99 
+# To access models in Unity Catalog, ensure that MLflow is up to date
+%pip install --upgrade "mlflow-skinny[databricks]>=2.4.1"
+%pip install -U  torch==2.1.0  torchvision==0.16.0  torchvision==0.15.2  transformers==4.35.0  accelerate==0.24.1  einops==0.7.0  sentencepiece==0.1.99 
 %pip install bitsandbytes==0.41.1 einops==0.7.0 trl==0.7.1 peft==0.5.0
 dbutils.library.restartPython()
 
 # COMMAND ----------
 
-# Define some parameters
-model_output_location = "/local_disk0/falcon-40b-lora-fine-tune"
-local_output_dir = "/local_disk0/results"
+import mlflow
+
+# Set mlflow registry to databricks-uc
+mlflow.set_registry_uri("databricks-uc")
+
+# COMMAND ----------
+
+catalog_name = "databricks_falcon-40b" # Default catalog name when installing the model from Databricks Marketplace
+version = 1
+
+model_mlflow_path = f"models:/{catalog_name}.models.falcon-40b/{version}"
+
+model_local_path = "/local_disk0/falcon-40b/"
+model_output_local_path = "/local_disk0/falcon-40b-lora-fine-tune"
+
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## Dataset
 # MAGIC
-# MAGIC We will use the [databricks-dolly-15k ](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
+# MAGIC We will use the [databricks-dolly-15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k) dataset.
 
 # COMMAND ----------
 
@@ -119,31 +131,36 @@ dataset["text"][0]
 # MAGIC %md
 # MAGIC ## Loading the model
 # MAGIC
-# MAGIC In this section we will load the [falcon-40b](https://huggingface.co/tiiuae/falcon-40b), quantize it in 4bit and attach LoRA adapters on it.
+# MAGIC In this section we will load the [falcon-40b](https://huggingface.co/tiiuae/falcon-40b) model installed from [Databricks marketplace]() saved in Unity Catalog to local disk, quantize it in 4bit and attach LoRA adapters on it.
 
 # COMMAND ----------
 
+from mlflow.artifacts import download_artifacts
+
+path = download_artifacts(artifact_uri=model_mlflow_path, dst_path=model_local_path)
+
+# COMMAND ----------
+
+import os
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoTokenizer
 
-# it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of `falcon-40b-instruct`. in https://huggingface.co/tiiuae/falcon-40b-instruct/commits/main
-model = "tiiuae/falcon-40b-instruct"
-revision = "ecb78d97ac356d098e79f0db222c9ce7c5d9ee5f"
+tokenizer_path = os.path.join(path, "components", "tokenizer")
+model_path = os.path.join(path, "model")
 
-tokenizer = AutoTokenizer.from_pretrained(model, trust_remote_code=True)
+tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
 tokenizer.pad_token = tokenizer.eos_token
 
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
+    bnb_4bit_use_double_quant=True,
     bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype=torch.float16,
+    bnb_4bit_compute_dtype=torch.bfloat16
 )
 
 model = AutoModelForCausalLM.from_pretrained(
-    model,
+    model_path,
     quantization_config=bnb_config,
-    revision=revision,
-    trust_remote_code=True,
 )
 model.config.use_cache = False
 
@@ -152,7 +169,7 @@ model.config.use_cache = False
 # MAGIC %md
 # MAGIC Load the configuration file in order to create the LoRA model. 
 # MAGIC
-# MAGIC According to QLoRA paper, it is important to consider all linear layers in the transformer block for maximum performance.
+# MAGIC According to QLoRA paper, it is important to consider all linear layers in the transformer block for maximum performance. 
 
 # COMMAND ----------
 
@@ -166,27 +183,6 @@ def find_all_linear_names(model):
         if isinstance(module, cls):
             names = name.split('.')
             lora_module_names.add(names[0] if len(names) == 1 else names[-1])
-
-    if 'lm_head' in lora_module_names: # needed for 16-bit
-        lora_module_names.remove('lm_head')
-    return list(lora_module_names)
-
-linear_layers = find_all_linear_names(model)
-print(f"Linear layers in the model: {linear_layers}")
-
-# COMMAND ----------
-
-# Choose all linear layers from the model
-import bitsandbytes as bnb
-
-def find_all_linear_names(model):
-    cls = bnb.nn.Linear4bit
-    lora_module_names = set()
-    for name, module in model.named_modules():
-        if isinstance(module, cls):
-            names = name.split('.')
-            lora_module_names.add(names[0] if len(names) == 1 else names[-1])
-
 
     if 'lm_head' in lora_module_names: # needed for 16-bit
         lora_module_names.remove('lm_head')
@@ -226,7 +222,8 @@ peft_config = LoraConfig(
 
 from transformers import TrainingArguments
 
-per_device_train_batch_size = 4
+output_dir = "/local_disk0/results"
+per_device_train_batch_size = 1
 gradient_accumulation_steps = 4
 optim = "paged_adamw_32bit"
 save_steps = 500
@@ -238,14 +235,14 @@ warmup_ratio = 0.03
 lr_scheduler_type = "constant"
 
 training_arguments = TrainingArguments(
-    output_dir=local_output_dir,
+    output_dir=output_dir,
     per_device_train_batch_size=per_device_train_batch_size,
     gradient_accumulation_steps=gradient_accumulation_steps,
     optim=optim,
     save_steps=save_steps,
     logging_steps=logging_steps,
     learning_rate=learning_rate,
-    fp16=True,
+    bf16=True,
     max_grad_norm=max_grad_norm,
     max_steps=max_steps,
     warmup_ratio=warmup_ratio,
@@ -307,7 +304,7 @@ trainer.train()
 
 # COMMAND ----------
 
-trainer.save_model(model_output_location)
+trainer.save_model(model_output_local_path)
 
 # COMMAND ----------
 
@@ -316,27 +313,18 @@ trainer.save_model(model_output_location)
 
 # COMMAND ----------
 
+import mlflow
 import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, AutoTokenizer
 from peft import PeftModel, PeftConfig
 
-peft_model_id = model_output_location
-config = PeftConfig.from_pretrained(peft_model_id)
-
-from huggingface_hub import snapshot_download
-# Download the Mistral-7B-v0.1 model snapshot from huggingface
-snapshot_location = snapshot_download(repo_id=config.base_model_name_or_path)
-
-
-# COMMAND ----------
-
-import mlflow
-class Mistral7BQLORA(mlflow.pyfunc.PythonModel):
+class QLORA(mlflow.pyfunc.PythonModel):
   def load_context(self, context):
-    self.tokenizer = AutoTokenizer.from_pretrained(context.artifacts['repository'])
-    self.tokenizer.pad_token = tokenizer.eos_token
+    self.tokenizer = AutoTokenizer.from_pretrained(context.artifacts['tokenizer'])
+    self.tokenizer.pad_token = self.tokenizer.eos_token
     config = PeftConfig.from_pretrained(context.artifacts['lora'])
     base_model = AutoModelForCausalLM.from_pretrained(
-      context.artifacts['repository'], 
+      context.artifacts['base_model'], 
       return_dict=True, 
       load_in_4bit=True, 
       device_map={"":0},
@@ -357,8 +345,8 @@ class Mistral7BQLORA(mlflow.pyfunc.PythonModel):
           top_p=0.7,
           num_return_sequences=1,
           do_sample=True,
-          pad_token_id=tokenizer.eos_token_id,
-          eos_token_id=tokenizer.eos_token_id,
+          pad_token_id=self.tokenizer.eos_token_id,
+          eos_token_id=self.tokenizer.eos_token_id,
       )
     generated_text = self.tokenizer.decode(output_tokens[0], skip_special_tokens=True)
 
@@ -388,12 +376,21 @@ input_example=pd.DataFrame({
 with mlflow.start_run() as run:  
     mlflow.pyfunc.log_model(
         "model",
-        python_model=Mistral7BQLORA(),
-        artifacts={'repository' : snapshot_location, "lora": peft_model_id},
+        python_model=QLORA(),
+        artifacts={'tokenizer' : tokenizer_path, "base_model": model_path,  "lora": model_output_local_path},
         pip_requirements=["torch", "transformers", "accelerate", "einops", "loralib", "bitsandbytes", "peft"],
         input_example=pd.DataFrame({"prompt":["what is ML?"], "temperature": [0.5],"max_tokens": [100]}),
         signature=signature
     )
+
+# COMMAND ----------
+
+registered_name = f"{catalog_name}.models.falcon-40b_fine_tune" # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
+
+result = mlflow.register_model(
+    "runs:/"+run.info.run_id+"/model",
+    registered_name,
+)
 
 # COMMAND ----------
 
@@ -412,10 +409,7 @@ if one get corona and you are self isolating and it is not severe, is there any 
 
 ### Response: """
 # Load model as a PyFuncModel.
-run_id = run.info.run_id
-logged_model = f"runs:/{run_id}/model"
-
-loaded_model = mlflow.pyfunc.load_model(logged_model)
+loaded_model = mlflow.pyfunc.load_model(f"models:/{registered_name}/1")
 
 text_example=pd.DataFrame({
             "prompt":[prompt], 
@@ -424,3 +418,6 @@ text_example=pd.DataFrame({
 
 # Predict on a Pandas DataFrame.
 loaded_model.predict(text_example)
+
+# COMMAND ----------
+
