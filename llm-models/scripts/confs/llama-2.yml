@@ -1,0 +1,16 @@
+model_family_name: llama-2
+model_name: falcon-7b
+base_model_name: falcon-7b
+instruct_model_name: falcon-7b-instruct
+hf_org_name: tiiuae
+model_size: 7
+support_vllm: true
+pip_requirements:
+  - torch==2.1.0
+  - torchvision==0.16.0
+  - torchvision==0.15.2
+  - transformers==4.35.0
+  - accelerate==0.24.1
+  - einops==0.7.0
+  - sentencepiece==0.1.99
+prompt_template:  llama2

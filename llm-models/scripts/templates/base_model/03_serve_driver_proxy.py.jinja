@@ -1,18 +1,24 @@
 # Databricks notebook source
 # MAGIC %md
 # MAGIC
-# MAGIC # Serving falcon-7b-instruct with a cluster driver proxy app
+# MAGIC # Serving {{ instruct_model_name }} with a cluster driver proxy app
 # MAGIC
-# MAGIC This notebook enables you to run [falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct) on a Databricks cluster and expose the model to LangChain via [driver proxy](https://python.langchain.com/en/latest/modules/models/llms/integrations/databricks.html#wrapping-a-cluster-driver-proxy-app).
+# MAGIC This notebook enables you to run [{{ instruct_model_name }}](https://huggingface.co/{{ hf_org_name }}/{{ instruct_model_name }}) on a Databricks cluster and expose the model to LangChain via [driver proxy](https://python.langchain.com/en/latest/modules/models/llms/integrations/databricks.html#wrapping-a-cluster-driver-proxy-app).
 # MAGIC
+{% if support_vllm %}
 # MAGIC
 # MAGIC [vllm](https://github.com/vllm-project/vllm/tree/main) is an open-source library that makes LLM inference fast with various optimizations.
 # MAGIC
+{% endif %}
 # MAGIC Environment for this notebook:
 # MAGIC - Instance:
-# MAGIC     - `g5.xlarge` on aws
-# MAGIC     - `Standard_NV36ads_A10_v5` on azure
-# MAGIC     - `g2-standard-4` on gcp
+{% for (cloud_name, compute_size) in compute_type.items() %}
+# MAGIC     - {{ compute_size }} on {{ cloud_name }}
+{% endfor %}
+{% if model_family_name == "llama-2"%}
+# MAGIC Requirements:
+# MAGIC - To get the access of the model on HuggingFace, please visit the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads) and accept our license terms and acceptable use policy before submitting this form. Requests will be processed in 1-2 days.
+{% endif %}
 
 # COMMAND ----------
 
@@ -21,13 +27,24 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install -U  torch==2.1.0  torchvision==0.16.0  torchvision==0.15.2  transformers==4.35.0  accelerate==0.24.1  einops==0.7.0  sentencepiece==0.1.99 
+# MAGIC %pip install -U {% for pip_package in pip_requirements %} {{ pip_package }} {% endfor %}
+
+{% if support_vllm %}
 # MAGIC %pip install -U vllm==0.2.0
+{% endif %}
 
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
 
+{% if model_family_name == "llama-2"%}
+from huggingface_hub import notebook_login
+
+# Login to Huggingface to get access to the model
+notebook_login()
+
+# COMMAND ----------
+{% endif %}
 
 # MAGIC %md
 # MAGIC ## Inference
@@ -35,14 +52,33 @@
 
 # COMMAND ----------
 
-# it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of `falcon-7b-instruct`. in https://huggingface.co/tiiuae/falcon-7b-instruct/commits/main
-model = "tiiuae/falcon-7b-instruct"
-revision = "cf4b3c42ce2fdfe24f753f0f0d179202fea59c99"
+# it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of `{{ instruct_model_name }}`. in https://huggingface.co/{{hf_org_name}}/{{instruct_model_name}}/commits/main
+model = "{{ hf_org_name }}/{{ instruct_model_name }}"
+revision = "{{ revision }}"
 
 # COMMAND ----------
 
+{% if support_vllm %}
 from vllm import LLM
 llm = LLM(model=model, revision=revision)
+{% else %}
+# Load model to text generation pipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import transformers
+import torch
+
+tokenizer = AutoTokenizer.from_pretrained(model)
+pipeline = transformers.pipeline(
+    "text-generation",
+    model=model,
+    tokenizer=tokenizer,
+    torch_dtype=torch.bfloat16,
+    trust_remote_code=True,
+    device_map="auto",
+    revision=revision,
+    return_full_text=False, # don't return the prompt, only return the generated response
+)
+{% endif %}
 
 # COMMAND ----------
 
@@ -54,11 +90,7 @@ If a question does not make any sense, or is not factually coherent, explain why
 
 INTRO_BLURB = "Below is an instruction that describes a task. Write a response that appropriately completes the request."
 PROMPT_FOR_GENERATION_FORMAT = """
-### Instruction:
-{system_prompt}
-{instruction}
-
-### Response:\n
+{{ prompt_template }}
 """.format(
     system_prompt=DEFAULT_SYSTEM_PROMPT,
     instruction="{instruction}"
@@ -67,6 +99,7 @@ PROMPT_FOR_GENERATION_FORMAT = """
 # COMMAND ----------
 
 # Define parameters to generate text
+{% if support_vllm %}
 from vllm import SamplingParams
 
 def gen_text_for_serving(prompt, **kwargs):
@@ -83,6 +116,24 @@ def gen_text_for_serving(prompt, **kwargs):
 
     return texts[0]
 
+{% else %}
+def gen_text_for_serving(prompt, **kwargs):
+    prompt = PROMPT_FOR_GENERATION_FORMAT.format(instruction=prompt)
+
+    # the default max length is pretty small (20), which would cut the generated output in the middle, so it's necessary to increase the threshold to the complete response
+    if "max_new_tokens" not in kwargs:
+        kwargs["max_new_tokens"] = 512
+
+    # configure other text generation arguments
+    kwargs.update(
+        {
+            "pad_token_id": tokenizer.eos_token_id,  # Hugging Face sets pad_token_id to eos_token_id by default; setting here to not see redundant message
+            "eos_token_id": tokenizer.eos_token_id,
+        }
+    )
+
+    return pipeline(prompt, **kwargs)[0]['generated_text']
+{% endif %}
 
 # COMMAND ----------
 
@@ -90,8 +141,13 @@ print(gen_text_for_serving("How to master Python in 3 days?"))
 
 # COMMAND ----------
 
+{% if support_vllm %}
 # See full list of configurable args: https://github.com/vllm-project/vllm/blob/main/vllm/sampling_params.py
 print(gen_text_for_serving("How to master Python in 3 days?", temperature=0.1, max_tokens=100))
+{% else %}
+# See full list of configurable args: https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
+print(gen_text_for_serving("How to master Python in 3 days?", temperature=0.1, max_new_tokens=100))
+{% endif %}
 
 # COMMAND ----------
 
@@ -102,10 +158,10 @@ print(gen_text_for_serving("How to master Python in 3 days?", temperature=0.1, m
 
 from flask import Flask, jsonify, request
 
-app = Flask("falcon-7b-instruct")
+app = Flask("{{ instruct_model_name }}")
 
 @app.route('/', methods=['POST'])
-def serve_falcon-7b-instruct():
+def serve_{{ instruct_model_name }}():
   resp = gen_text_for_serving(**request.json)
   return jsonify(resp)
 
@@ -131,7 +187,7 @@ port = {port}
 # MAGIC import requests
 # MAGIC import json
 # MAGIC
-# MAGIC def request_falcon-7b-instruct(prompt, temperature=1.0, max_new_tokens=1024):
+# MAGIC def request_{{ instruct_model_name }}(prompt, temperature=1.0, max_new_tokens=1024):
 # MAGIC   token = ... # TODO: fill in with your Databricks personal access token that can access the cluster that runs this driver proxy notebook
 # MAGIC   url = ...   # TODO: fill in with the driver_proxy_api output above
 # MAGIC   
@@ -149,7 +205,7 @@ port = {port}
 # MAGIC   return response.text
 # MAGIC
 # MAGIC
-# MAGIC request_falcon-7b-instruct("What is databricks?")
+# MAGIC request_{{ instruct_model_name }}("What is databricks?")
 # MAGIC ```
 # MAGIC Or you could try using ai_query([doucmentation](https://docs.databricks.com/sql/language-manual/functions/ai_query.html)) to call this driver proxy from Databricks SQL with:
 # MAGIC ```

@@ -1,40 +1,43 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Falcon-7b-instruct Inference on Databricks
-# MAGIC [Falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct) is a 7B parameters decoder-only model that is fine-tuned on chat/instruct datasets on top of [Falcon-7B](https://huggingface.co/tiiuae/falcon-7b), with context length 2048.
+# MAGIC # `falcon-7b-instruct` Inference on Databricks
+# MAGIC
+# MAGIC The [falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct) Large Language Model (LLM) is a instruct fine-tuned version of the [falcon-7b](https://huggingface.co/tiiuae/falcon-7b) generative text model using a variety of publicly available conversation datasets.
 # MAGIC
 # MAGIC Environment for this notebook:
-# MAGIC - Runtime: 13.1 GPU ML Runtime
-# MAGIC - Instance: `g5.4xlarge` on AWS, `Standard_NV36ads_A10_v5` on Azure
+# MAGIC - Runtime: 14.0 GPU ML Runtime
+# MAGIC - Instance:
+# MAGIC     - `g5.xlarge` on aws
+# MAGIC     - `Standard_NV36ads_A10_v5` on azure
+# MAGIC     - `g2-standard-4` on gcp
+
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## Install required packages
-# MAGIC Falcon uses PyTorch 2.0 and thus requires package upgrades.
 
 # COMMAND ----------
 
-# MAGIC %pip install -q -U torch==2.0.1
-# MAGIC %pip install -q einops==0.6.1
+# MAGIC %pip install -U  torch==2.1.0  torchvision==0.16.0  torchvision==0.15.2  transformers==4.35.0  accelerate==0.24.1  einops==0.7.0  sentencepiece==0.1.99 
+# MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## Inference
-# MAGIC The below snippets are adapted from [the model card of falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct). The example in the model card should also work on Databricks with the same environment.
+# MAGIC The example in the model card should also work on Databricks with the same environment.
 
 # COMMAND ----------
 
 # Load model to text generation pipeline
-
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer
 import transformers
 import torch
 
-# it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of falcon-7b-instruct in https://huggingface.co/tiiuae/falcon-7b-instruct/commits/main
+# it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of `falcon-7b-instruct`. in https://huggingface.co/tiiuae/falcon-7b-instruct/commits/main
 model = "tiiuae/falcon-7b-instruct"
-revision="9f16e66a0235c4ba24e321e3be86dd347a7911a0"
+revision = "cf4b3c42ce2fdfe24f753f0f0d179202fea59c99"
 
 tokenizer = AutoTokenizer.from_pretrained(model, padding_side="left")
 pipeline = transformers.pipeline(
@@ -42,9 +45,10 @@ pipeline = transformers.pipeline(
     model=model,
     tokenizer=tokenizer,
     torch_dtype=torch.bfloat16,
-    trust_remote_code=True,
     device_map="auto",
     revision=revision,
+    do_sample=True,
+    return_full_text=False
 )
 
 # Required tokenizer setting for batch inference
@@ -52,22 +56,24 @@ pipeline.tokenizer.pad_token_id = tokenizer.eos_token_id
 
 # COMMAND ----------
 
-# Define prompt template, the format below is from: http://fastml.com/how-to-train-your-own-chatgpt-alpaca-style-part-one/
+# In order to leverage instruction fine-tuning, your prompt should be surrounded by [INST] and [\INST] tokens. The very first instruction should begin with a begin of sentence id. The next instructions should not. The assistant generation will be ended by the end-of-sentence token id.
 
-# Prompt templates as follows could guide the model to follow instructions and respond to the input, and empirically it turns out to make Falcon models produce better responses
+DEFAULT_SYSTEM_PROMPT = """\
+You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
 
-INSTRUCTION_KEY = "### Instruction:"
-RESPONSE_KEY = "### Response:"
+If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."""
+
 INTRO_BLURB = "Below is an instruction that describes a task. Write a response that appropriately completes the request."
-PROMPT_FOR_GENERATION_FORMAT = """{intro}
-{instruction_key}
+PROMPT_FOR_GENERATION_FORMAT = """
+<s>[INST]<<SYS>>
+{system_prompt}
+<</SYS>>
+
 {instruction}
-{response_key}
+[/INST]
 """.format(
-    intro=INTRO_BLURB,
-    instruction_key=INSTRUCTION_KEY,
-    instruction="{instruction}",
-    response_key=RESPONSE_KEY,
+    system_prompt=DEFAULT_SYSTEM_PROMPT,
+    instruction="{instruction}"
 )
 
 # COMMAND ----------
@@ -92,7 +98,6 @@ def gen_text(prompts, use_template=False, **kwargs):
     # configure other text generation arguments, see common configurable args here: https://huggingface.co/docs/transformers/main_classes/text_generation#transformers.GenerationConfig
     kwargs.update(
         {
-            "do_sample": True,  # by default when do_sample=False the generation method is greedy decoding; with do_sample=True, popular arguments such as temperature, top_p, and top_k could take effect
             "pad_token_id": tokenizer.eos_token_id,  # Hugging Face sets pad_token_id to eos_token_id by default; setting here to not see redundant message
             "eos_token_id": tokenizer.eos_token_id,
         }
@@ -110,7 +115,7 @@ def gen_text(prompts, use_template=False, **kwargs):
 
 # COMMAND ----------
 
-results = gen_text(["What is a large language model?"])
+results = gen_text(["<s>[INST]What is a large language model?[/INST]"])
 print(results[0])
 
 # COMMAND ----------
@@ -137,7 +142,7 @@ def get_num_tokens(text):
 
 print('number of tokens for input:', get_num_tokens(long_input))
 
-results = gen_text([long_input], max_new_tokens=200, use_template=True)
+results = gen_text([long_input], max_new_tokens=150, use_template=True)
 print(results[0])
 
 # COMMAND ----------
@@ -181,12 +186,11 @@ for output in results:
 # MAGIC %md
 # MAGIC ## Measure inference speed
 # MAGIC Text generation speed is often measured with token/s, which is the average number of tokens that are generated by the model per second.
+# MAGIC
 
 # COMMAND ----------
 
 import time
-import logging
-
 
 def get_gen_text_throughput(prompt, use_template=True, **kwargs):
     """
@@ -229,10 +233,9 @@ def get_gen_text_throughput(prompt, use_template=True, **kwargs):
 
 # COMMAND ----------
 
-throughput, n_tokens, result = get_gen_text_throughput("What is ML?", max_new_tokens=200, use_template=True)
+throughput, n_tokens, result = get_gen_text_throughput("What is ML?", use_template=False)
 
 print(f"{throughput} tokens/sec, {n_tokens} tokens (not including prompt)")
-print(result)
 
 # COMMAND ----------
 
@@ -240,4 +243,6 @@ print(result)
 throughput, n_tokens, result = get_gen_text_throughput(long_input, max_new_tokens=200, use_template=True)
 
 print(f"{throughput} tokens/sec, {n_tokens} tokens (not including prompt)")
-print(result)
+
+# COMMAND ----------
+

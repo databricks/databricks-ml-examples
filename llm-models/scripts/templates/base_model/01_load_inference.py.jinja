@@ -2,15 +2,29 @@
 # MAGIC %md
 # MAGIC # `{{ model_name }}` Inference on Databricks
 # MAGIC
-# MAGIC The [{{ model_name }}](https://huggingface.co/{{ hf_org_name }}/{{ model_name }}) Large Language Model (LLM) is a instruct fine-tuned version of the [{{ base_model_name }}](https://huggingface.co/{{ hf_org_name }}/{{ base_model_name }}) generative text model using a variety of publicly available conversation datasets.
+# MAGIC The [{{ instruct_model_name }}](https://huggingface.co/{{ hf_org_name }}/{{ instruct_model_name }}) Large Language Model (LLM) is a instruct fine-tuned version of the [{{ base_model_name }}](https://huggingface.co/{{ hf_org_name }}/{{ base_model_name }}) generative text model using a variety of publicly available conversation datasets.
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 14.0 GPU ML Runtime
-# MAGIC - Instance: `g5.4xlarge` on AWS, `Standard_NV36ads_A10_v5` on Azure
+# MAGIC - Instance:
+{% for (cloud_name, compute_size) in compute_type.items() %}
+# MAGIC     - {{ compute_size }} on {{ cloud_name }}
+{% endfor %}
+
+{% if model_family_name == "llama-2"%}
+# MAGIC Requirements:
+# MAGIC - To get the access of the model on HuggingFace, please visit the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads) and accept our license terms and acceptable use policy before submitting this form. Requests will be processed in 1-2 days.
+{% endif %}
 
 # COMMAND ----------
 
-# MAGIC %pip install -U transformers==4.34.0
+# MAGIC %md
+# MAGIC ## Install required packages
+
+# COMMAND ----------
+
+# MAGIC %pip install -U {% for pip_package in pip_requirements %} {{ pip_package }} {% endfor %}
+
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -22,13 +36,13 @@
 # COMMAND ----------
 
 # Load model to text generation pipeline
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer
 import transformers
 import torch
 
-# it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of Mistral-7B-Instruct-v0. in https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1/commits/main
-model = "mistralai/Mistral-7B-Instruct-v0.1"
-revision = "3dc28cf29d2edd31a0a7b8f0b21637059815b4d5"
+# it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of `{{ instruct_model_name }}`. in https://huggingface.co/{{hf_org_name}}/{{instruct_model_name}}/commits/main
+model = "{{ hf_org_name }}/{{ instruct_model_name }}"
+revision = "{{ revision }}"
 
 tokenizer = AutoTokenizer.from_pretrained(model, padding_side="left")
 pipeline = transformers.pipeline(
@@ -55,6 +69,7 @@ You are a helpful, respectful and honest assistant. Always answer as helpfully a
 If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information."""
 
 INTRO_BLURB = "Below is an instruction that describes a task. Write a response that appropriately completes the request."
+{% if prompt_template %}
 PROMPT_FOR_GENERATION_FORMAT = """
 <s>[INST]<<SYS>>
 {system_prompt}
@@ -66,6 +81,16 @@ PROMPT_FOR_GENERATION_FORMAT = """
     system_prompt=DEFAULT_SYSTEM_PROMPT,
     instruction="{instruction}"
 )
+{% else %}
+PROMPT_FOR_GENERATION_FORMAT = """
+{system_prompt}
+
+{instruction}
+""".format(
+    system_prompt=DEFAULT_SYSTEM_PROMPT,
+    instruction="{instruction}"
+)
+{% endif %}
 
 # COMMAND ----------
 
@@ -182,8 +207,6 @@ for output in results:
 # COMMAND ----------
 
 import time
-import logging
-
 
 def get_gen_text_throughput(prompt, use_template=True, **kwargs):
     """

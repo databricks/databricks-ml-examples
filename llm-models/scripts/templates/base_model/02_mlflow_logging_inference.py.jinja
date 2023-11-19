@@ -1,16 +1,20 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # Manage `falcon-7b-instruct` model with MLFlow on Databricks
+# MAGIC # Manage `{{ model_name }}` model with MLFlow on Databricks
 # MAGIC
-# MAGIC The [falcon-7b-instruct](https://huggingface.co/tiiuae/falcon-7b-instruct) Large Language Model (LLM) is a instruct fine-tuned version of the [falcon-7b](https://huggingface.co/tiiuae/falcon-7b) generative text model using a variety of publicly available conversation datasets.
+# MAGIC The [{{ instruct_model_name }}](https://huggingface.co/{{ hf_org_name }}/{{ instruct_model_name }}) Large Language Model (LLM) is a instruct fine-tuned version of the [{{ base_model_name }}](https://huggingface.co/{{ hf_org_name }}/{{ base_model_name }}) generative text model using a variety of publicly available conversation datasets.
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 14.0 GPU ML Runtime
 # MAGIC - Instance:
-# MAGIC     - `g5.xlarge` on aws
-# MAGIC     - `Standard_NV36ads_A10_v5` on azure
-# MAGIC     - `g2-standard-4` on gcp
+{% for (cloud_name, compute_size) in compute_type.items() %}
+# MAGIC     - {{ compute_size }} on {{ cloud_name }}
+{% endfor %}
 
+{% if model_family_name == "llama-2"%}
+# MAGIC Requirements:
+# MAGIC - To get the access of the model on HuggingFace, please visit the [Meta website](https://ai.meta.com/resources/models-and-libraries/llama-downloads) and accept our license terms and acceptable use policy before submitting this form. Requests will be processed in 1-2 days.
+{% endif %}
 
 # COMMAND ----------
 
@@ -20,7 +24,8 @@
 # COMMAND ----------
 
 # MAGIC %pip install -U "mlflow-skinny[databricks]>=2.6.0"
-# MAGIC %pip install -U  torch==2.1.0  torchvision==0.16.0  torchvision==0.15.2  transformers==4.35.0  accelerate==0.24.1  einops==0.7.0  sentencepiece==0.1.99 
+# MAGIC %pip install -U {% for pip_package in pip_requirements %} {{ pip_package }} {% endfor %}
+
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -30,9 +35,9 @@
 
 # COMMAND ----------
 
-# it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of `falcon-7b-instruct`. in https://huggingface.co/tiiuae/falcon-7b-instruct/commits/main
-model = "tiiuae/falcon-7b-instruct"
-revision = "cf4b3c42ce2fdfe24f753f0f0d179202fea59c99"
+# it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of `{{ instruct_model_name }}`. in https://huggingface.co/{{hf_org_name}}/{{instruct_model_name}}/commits/main
+model = "{{ hf_org_name }}/{{ instruct_model_name }}"
+revision = "{{ revision }}"
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
@@ -90,7 +95,7 @@ with mlflow.start_run() as run:
         metadata={
             "task": "llm/v1/completions",
             "databricks_model_source": "example-notebooks",
-            "databricks_model_size_parameters": "7b"
+            "databricks_model_size_parameters": "{{model_size}}b"
         }
     )
 
@@ -115,7 +120,7 @@ mlflow.set_registry_uri("databricks-uc")
 # Register model to Unity Catalog
 # This may take 2 minutes to complete
 
-registered_name = "models.default.falcon-7b-instruct"  # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
+registered_name = "models.default.{{ instruct_model_name }}"  # Note that the UC model name follows the pattern <catalog_name>.<schema_name>.<model_name>, corresponding to the catalog, schema, and registered model name
 
 result = mlflow.register_model(
     "runs:/" + run.info.run_id + "/model",
@@ -164,7 +169,7 @@ loaded_model.predict(
 # COMMAND ----------
 
 # Provide a name to the serving endpoint
-endpoint_name = 'falcon-7b-instruct'
+endpoint_name = '{{ instruct_model_name }}'
 
 # COMMAND ----------
 
@@ -184,8 +189,9 @@ served_name = f'{model_version.name.replace(".", "_")}_{model_version.version}'
 
 # Specify the type of compute (CPU, GPU_SMALL, GPU_MEDIUM, etc.)
 # Choose:
-#    - GPU_MEDIUM on aws
-#    - GPU_LARGE on azure
+{% for (cloud_name, compute_size) in serving_type.items() %}
+#    - {{ compute_size }} on {{ cloud_name }}
+{% endfor %}
 
 workload_type = "GPU_MEDIUM"
 

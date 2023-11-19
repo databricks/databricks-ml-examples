@@ -1,5 +1,0 @@
-model_family_name: falcon
-model_name: falcon-7b
-base_model_name: falcon-7b
-instruct_model_name: falcon-7b-instruct
-hf_org_name: tiiuae
