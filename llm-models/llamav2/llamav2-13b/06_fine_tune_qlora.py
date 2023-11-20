@@ -22,8 +22,9 @@
 # COMMAND ----------
 
 # MAGIC %pip install git+https://github.com/huggingface/peft.git
-# MAGIC %pip install datasets==2.12.0 bitsandbytes==0.40.1 einops==0.6.1 trl==0.4.7
+# MAGIC %pip install bitsandbytes==0.40.1 einops==0.6.1 trl==0.4.7
 # MAGIC %pip install torch==2.0.1 accelerate==0.21.0 transformers==4.31.0
+# MAGIC %pip install -U datasets
 
 # COMMAND ----------
 
