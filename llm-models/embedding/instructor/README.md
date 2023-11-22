@@ -14,8 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Instructor-XL model
-[Instructor-XL](https://huggingface.co/hkunlp/instructor-xl) is an instruction-finetuned text embedding model that can generate text embeddings tailored to any task (e.g., classification, retrieval, clustering, text evaluation, etc.) and domains (e.g., science, finance, etc.) by simply providing the task instruction, without any finetuning.
+# Instructor Model Family
+
+Instructor embedding models ([instructor-xl](https://huggingface.co/hkunlp/instructor-xl), [instructor-large](https://huggingface.co/hkunlp/instructor-large), [instructor-base](https://huggingface.co/hkunlp/instructor-base)) are instruction-finetuned text embedding models that can generate text embeddings tailored to any task (e.g., classification, retrieval, clustering, text evaluation, etc.) and domains (e.g., science, finance, etc.) by simply providing the task instruction, without any finetuning.
 
 ![alt text](https://instructor-embedding.github.io/static/images/instructor.png)
 
