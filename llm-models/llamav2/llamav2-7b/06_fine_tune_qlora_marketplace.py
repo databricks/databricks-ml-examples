@@ -22,8 +22,9 @@
 # To access models in Unity Catalog, ensure that MLflow is up to date
 %pip install --upgrade "mlflow-skinny[databricks]>=2.4.1"
 %pip install peft==0.5.0
-%pip install datasets==2.14.6 bitsandbytes==0.41.1 einops==0.7.0 trl==0.7.2
+%pip install bitsandbytes==0.41.1 einops==0.7.0 trl==0.7.2
 %pip install accelerate==0.23.0 transformers==4.34.1
+%pip install -U datasets
 dbutils.library.restartPython()
 
 # COMMAND ----------
