@@ -289,7 +289,7 @@ import mlflow
 class LLAMAQLORA(mlflow.pyfunc.PythonModel):
   def load_context(self, context):
     self.tokenizer = AutoTokenizer.from_pretrained(context.artifacts['repository'])
-    self.tokenizer.pad_token = tokenizer.eos_token
+    self.tokenizer.pad_token = self.tokenizer.eos_token
     config = PeftConfig.from_pretrained(context.artifacts['lora'])
     base_model = AutoModelForCausalLM.from_pretrained(
       context.artifacts['repository'], 
@@ -313,8 +313,8 @@ class LLAMAQLORA(mlflow.pyfunc.PythonModel):
           top_p=0.7,
           num_return_sequences=1,
           do_sample=True,
-          pad_token_id=tokenizer.eos_token_id,
-          eos_token_id=tokenizer.eos_token_id,
+          pad_token_id=self.tokenizer.eos_token_id,
+          eos_token_id=self.tokenizer.eos_token_id,
       )
     generated_text = self.tokenizer.decode(output_tokens[0], skip_special_tokens=True)
 
