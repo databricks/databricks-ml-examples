@@ -9,7 +9,7 @@
 # MAGIC This example is based on [LlamaGuard example](https://colab.research.google.com/drive/16s0tlCSEDtczjPzdIK3jq0Le5LlnSYGf?usp=sharing#scrollTo=GIA-xuPpJ2JY).
 # MAGIC
 # MAGIC Environment for this notebook:
-# MAGIC - Runtime: 14.2 GPU ML Runtime
+# MAGIC - Runtime: 14.1 GPU ML Runtime
 # MAGIC - Instance: `g5.xlarge` on AWS, `Standard_NV36ads_A10_v5` on Azure, `g2-standard-4` on GCP.
 # MAGIC
 # MAGIC Requirements:
