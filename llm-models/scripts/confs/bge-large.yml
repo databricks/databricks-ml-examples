@@ -1,0 +1,7 @@
+model_family_name: bge
+model_name: bge-large-en-v1.5
+hf_org_name: BAAI
+model_size: 7
+support_vllm: true
+pip_requirements:
+  - langchain==0.0.262

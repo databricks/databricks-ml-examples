@@ -73,7 +73,31 @@ def inference_instance_type(model_size: int, work_type: str) -> str:
     :param work_type: work type ('model_serving', 'inference', 'peft', or 'full_tune').
     :return: A string representing the size category ('small', 'medium', or 'large').
     """
-    if model_size < 13:
+    if model_size < 3:
+        if work_type == 'model_serving':
+            return {
+                "aws": "GPU_SMALL",
+                "azure": "GPU_SMALL",
+            }
+        elif work_type == 'inference':
+            return {
+                "aws": "`g4dn.xlarge`",
+                "azure": "`Standard_NC4as_T4_v3`",
+                "gcp": "`g2-standard-4`",
+            }
+        elif work_type == 'peft':
+            return {
+                "aws": "`g5.xlarge`",
+                "azure": "`Standard_NV36ads_A10_v5`",
+                "gcp": "`g2-standard-8` or `a2-highgpu-1g`",
+            }
+        elif work_type == 'full_tune':
+            return {
+                "aws": "`g5.xlarge`",
+                "azure": "`Standard_NV36ads_A10_v5`",
+                "gcp": "`g2-standard-8` or `a2-highgpu-1g`",
+            }
+    elif model_size < 13:
         if work_type == 'model_serving':
             return {
                 "aws": "GPU_MEDIUM",
@@ -97,7 +121,6 @@ def inference_instance_type(model_size: int, work_type: str) -> str:
                 "azure": "`Standard_NV36ads_A10_v5`",
                 "gcp": "`g2-standard-8` or `a2-highgpu-1g`",
             }
-
     elif 13 <= model_size < 24:
         if work_type == 'model_serving':
             return {
