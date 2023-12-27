@@ -70,7 +70,7 @@ inference_config = {
 }
 signature = infer_signature(
     model_input=input_example,
-    model_output="Machien Learning is...",
+    model_output="Machine Learning is...",
     params=inference_config
 )
 
