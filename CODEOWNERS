@@ -1,0 +1,7 @@
+# There can be only one CODEOWNERS file in the repo for clarity. See https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-file-location
+
+# Catch-all rule comes first
+
+* @databricks/eng-ml-training-team
+
+# Specific owners are listed last. Please keep this list in the alphabetical order
