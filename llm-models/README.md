@@ -1,3 +1,16 @@
+---
+title: "LLM models"
+language: Python
+author: "eng-ml-training-team"
+date: 2023-07-15
+
+tags: 
+- LLM
+- mlflow
+- inference
+- fine-tune
+---
+
 <!---
 Copyright (C) 2023 Databricks, Inc.
 
@@ -20,10 +33,14 @@ limitations under the License.
 
 ## LLMs for text generation
 This folder contains:
-- `llamav2/`: Example notebooks for `Llama 2` models
 - `falcon/`: Example notebooks for `Falcon` models
+- `llamav2/`: Example notebooks for `Llama 2` models
+- `mistral/`: Example notebooks for `Mixtral-7b` models
+- `mistral-8x7b/`: Example notebooks for `Mixtral-8x7b` models
 - `mpt/`: Example notebooks for `MPT` models
 - `xgen/`: Example notebooks for `XGen-7B` model
+- `safeguard/llamaguard`: Example notebooks for `llamaguard` model
+- `transcription/whisper`: Example notebooks for `whisper` model
 
 ## LLMs for code generation
 The `code_generation/` folder includes examples for code generation models 
@@ -31,7 +48,14 @@ The `code_generation/` folder includes examples for code generation models
 
 ## LLMs for text embedding
 The `embedding/` folder includes examples for embedding models:
-- `embedding/`: Example notebooks for embedding models including bge models
+- `bge/`: Example notebooks for embedding models including bge models
+- `e5-v2/`: Example notebooks for embedding models including e5-v2 models
+- `gte/`: Example notebooks for embedding models including gte models
+- `instructor/`: Example notebooks for embedding models including instructor models
+
+## Image Generation Models
+The `image_generation/` folder includes examples for image generation models
+- `stable_diffusion/`: Example notebooks for stable diffusion models
 
 ## Other LLM models
 The `experimental/` folder includes:
