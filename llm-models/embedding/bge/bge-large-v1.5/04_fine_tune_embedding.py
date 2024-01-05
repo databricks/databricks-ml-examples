@@ -16,6 +16,7 @@ from datasets import load_dataset
 
 # COMMAND ----------
 
+# Update the following path to point to a UC Volumes location if DBFS is not available
 output_model_path = "/dbfs/fine_tuned_bge_v1_5_model"
 
 # COMMAND ----------

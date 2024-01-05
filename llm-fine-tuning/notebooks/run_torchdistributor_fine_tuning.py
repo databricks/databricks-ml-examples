@@ -81,6 +81,8 @@ SUPPORTED_INPUT_MODELS = [
 get_dbutils().widgets.combobox("local_mode", "true", ["true", "false"], "local_mode")
 get_dbutils().widgets.combobox("use_fsdp", "false", ["true", "false"], "use_fsdp")
 get_dbutils().widgets.text("num_gpus", "4", "num_gpus")
+
+# Update the following widget to point to a UC Volumes location if DBFS is not available
 get_dbutils().widgets.text("dbfs_output_location", "/dbfs/llm/", "dbfs_output_location")
 get_dbutils().widgets.combobox(
     "pretrained_name_or_path",

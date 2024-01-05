@@ -73,3 +73,13 @@ The model evaluation results presented below are measured by the [Mosaic Eval Ga
 - [DIY QA LLM BOT](https://github.com/puneet-jain159/DSS_LLM_QA_Retrieval_Session/tree/main)
 - [Tuning the Finetuning: An exploration of achieving success with QLoRA](https://github.com/avisoori-databricks/Tuning-the-Finetuning)
 - [databricks-llm-fine-tuning](https://github.com/mshtelma/databricks-llm-fine-tuning)
+
+## Troubleshooting:
+
+Starting MLR 14.3, Databricks GA’d UC Volumes as a powerful substitute for DBFS (link the announcement doc here). If your workspace doesn’t support DBFS, any notebooks which use DBFS paths can fail vague errors like the following:
+
+```
+OSError: [Errno 95] Operation not supported
+```
+
+If you are encountering the aforementioned issue(s), please update any paths pointing to DBFS to instead point to a UC Volume that you can access. There are comments throughout this codebase indicating what should be updated. 

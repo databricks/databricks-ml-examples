@@ -71,6 +71,8 @@ SUPPORTED_INPUT_MODELS = [
 # COMMAND ----------
 
 get_dbutils().widgets.text("num_gpus", "8", "num_gpus")
+
+# Update the following widget to point to a UC Volumes location if DBFS is not available
 get_dbutils().widgets.text("dbfs_output_location", "/dbfs/llm/", "dbfs_output_location")
 get_dbutils().widgets.combobox(
     "pretrained_name_or_path",

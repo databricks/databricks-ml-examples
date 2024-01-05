@@ -53,6 +53,8 @@ notebook_login()
 
 # COMMAND ----------
 
+# Update any paths that point to DBFS to instead point to UC Volumes (for instance, final_model_output_path) 
+# Make sure to update all instances of the modified path in the notebook 
 !deepspeed \
 scripts/fine_tune_deepspeed.py \
 --final_model_output_path="/dbfs/llm" \

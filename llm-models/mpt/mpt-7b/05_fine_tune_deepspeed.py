@@ -52,6 +52,8 @@ dbutils.library.restartPython()
 
 # COMMAND ----------
 
+# Update dbfs-output-dir to point to a UC Volumes location if DBFS is not available
+# Make sure to update all related paths in the notebook
 # MAGIC %sh
 # MAGIC deepspeed scripts/fine_tune_deepspeed.py --per-device-train-batch-size=1 --per-device-eval-batch-size=1 --epochs=1 --max-steps=-1 --no-gradient-checkpointing --dbfs-output-dir /dbfs/mpt-7b/
 

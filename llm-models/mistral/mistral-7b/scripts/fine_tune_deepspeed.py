@@ -31,6 +31,7 @@ MODEL_PATH = "mistralai/Mistral-7B-v0.1"
 TOKENIZER_PATH = "mistralai/Mistral-7B-v0.1"
 DEFAULT_TRAINING_DATASET = "mosaicml/dolly_hhrlhf"
 CONFIG_PATH = "../../config/a10_config.json"
+# Update the following path to point to a UC Volumes location if DBFS is not available
 LOCAL_OUTPUT_DIR = "/dbfs/Mistral-7B-fine-tune/output"
 DEFAULT_SEED = 68
 
