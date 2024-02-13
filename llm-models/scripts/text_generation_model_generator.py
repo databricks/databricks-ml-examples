@@ -20,12 +20,13 @@ _logger.addHandler(handler)
 _SECTIONS_PACKAGE = "./scripts/templates/"
 
 FINE_TUNE_EXAMPLES = [
-    "03_fine_tune_qlora.py",
+    "04_fine_tune_qlora.py",
 #     "06_fine_tune_qlora_marketplace.py",
 ]
 EXAMPLE_NOTEBOOK_LIST = [
     "01_load_inference.py",
     "02_mlflow_logging_inference.py",
+    "03_langchain_inference.py",
 #     "08_load_from_marketplace.py",
 ] + FINE_TUNE_EXAMPLES
 
