@@ -1,0 +1,9 @@
+
+{# macro to render a python string list with double quote strings #}
+{% macro render_string_list(lst) %}
+{% set params = [] %}
+{% for elem in lst %}
+{% set params = params.append('"' + elem +'"') %}
+{% endfor %}
+[{{ params|join(", ") }}]
+{%- endmacro %}
