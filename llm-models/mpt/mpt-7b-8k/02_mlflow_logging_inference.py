@@ -5,7 +5,7 @@
 # MAGIC The [mpt-7b-8k-instruct](https://huggingface.co/mosaicml/mpt-7b-8k-instruct) Large Language Model (LLM) is a instruct fine-tuned version of the [mpt-7b-8k](https://huggingface.co/mosaicml/mpt-7b-8k) generative text model using a variety of publicly available conversation datasets.
 # MAGIC
 # MAGIC Environment for this notebook:
-# MAGIC - Runtime: 14.0 GPU ML Runtime
+# MAGIC - Runtime: 14.3 GPU ML Runtime
 # MAGIC - Instance:
 # MAGIC     - `g5.xlarge` on aws
 # MAGIC     - `Standard_NV36ads_A10_v5` on azure

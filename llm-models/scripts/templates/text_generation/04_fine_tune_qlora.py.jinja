@@ -251,7 +251,7 @@ peft_model_id = model_output_location
 config = PeftConfig.from_pretrained(peft_model_id)
 
 from huggingface_hub import snapshot_download
-# Download the Mistral-7B-v0.1 model snapshot from huggingface
+# Download the model snapshot from huggingface
 snapshot_location = snapshot_download(repo_id=config.base_model_name_or_path)
 
 
@@ -275,12 +275,12 @@ class FineTunedQLORA(mlflow.pyfunc.PythonModel):
   def predict(self, context, model_input):
     prompt = model_input["prompt"][0]
     temperature = model_input.get("temperature", [1.0])[0]
-    max_tokens = model_input.get("max_tokens", [100])[0]
+    max_new_tokens = model_input.get("max_new_tokens", [100])[0]
     batch = self.tokenizer(prompt, padding=True, truncation=True,return_tensors='pt').to('cuda')
     with torch.cuda.amp.autocast():
       output_tokens = self.model.generate(
           input_ids = batch.input_ids, 
-          max_new_tokens=max_tokens,
+          max_new_tokens=max_new_tokens,
           temperature=temperature,
           top_p=0.7,
           num_return_sequences=1,
@@ -303,7 +303,7 @@ import mlflow
 input_schema = Schema([
     ColSpec(DataType.string, "prompt"), 
     ColSpec(DataType.double, "temperature"), 
-    ColSpec(DataType.long, "max_tokens")])
+    ColSpec(DataType.long, "max_new_tokens")])
 output_schema = Schema([ColSpec(DataType.string)])
 signature = ModelSignature(inputs=input_schema, outputs=output_schema)
 
@@ -311,7 +311,7 @@ signature = ModelSignature(inputs=input_schema, outputs=output_schema)
 input_example=pd.DataFrame({
             "prompt":["what is ML?"], 
             "temperature": [0.5],
-            "max_tokens": [100]})
+            "max_new_tokens": [100]})
 
 with mlflow.start_run() as run:  
     mlflow.pyfunc.log_model(
@@ -319,7 +319,7 @@ with mlflow.start_run() as run:
         python_model=FineTunedQLORA(),
         artifacts={'repository' : snapshot_location, "lora": peft_model_id},
         pip_requirements=["torch", "transformers", "accelerate", "einops", "loralib", "bitsandbytes", "peft"],
-        input_example=pd.DataFrame({"prompt":["what is ML?"], "temperature": [0.5],"max_tokens": [100]}),
+        input_example=pd.DataFrame({"prompt":["what is ML?"], "temperature": [0.5],"max_new_tokens": [100]}),
         signature=signature
     )
 
@@ -348,7 +348,7 @@ loaded_model = mlflow.pyfunc.load_model(logged_model)
 text_example=pd.DataFrame({
             "prompt":[prompt], 
             "temperature": [0.5],
-            "max_tokens": [100]})
+            "max_new_tokens": [100]})
 
 # Predict on a Pandas DataFrame.
 loaded_model.predict(text_example)

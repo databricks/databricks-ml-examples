@@ -47,7 +47,7 @@ def inference_instance_type(model_size: int, work_type: str) -> str:
     """
     Determines the size category based on the given integer input.
 
-    :param model_size: model size.
+    :param model_size: rounded number of billions of parameters for the model.
     :param work_type: work type ('model_serving', 'inference', 'peft', or 'full_tune').
     :return: A string representing the size category ('small', 'medium', or 'large').
     """

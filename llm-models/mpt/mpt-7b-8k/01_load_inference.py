@@ -6,7 +6,7 @@
 # MAGIC
 # MAGIC [vllm](https://github.com/vllm-project/vllm/tree/main) is an open-source library that makes LLM inference fast with various optimizations.
 # MAGIC Environment for this notebook:
-# MAGIC - Runtime: 14.2 GPU ML Runtime
+# MAGIC - Runtime: 14.3 GPU ML Runtime
 # MAGIC - Instance:
 # MAGIC     - `g5.xlarge` on aws
 # MAGIC     - `Standard_NV36ads_A10_v5` on azure
@@ -38,8 +38,6 @@ from transformers import AutoTokenizer
 # it is suggested to pin the revision commit hash and not change it for reproducibility because the uploader might change the model afterwards; you can find the commmit history of `mpt-7b-8k-instruct`. in https://huggingface.co/mosaicml/mpt-7b-8k-instruct/commits/main
 model = "mosaicml/mpt-7b-8k-instruct"
 revision = "fa099ce469116153c8c0238c1d220c01e871a992"
-
-tokenizer = AutoTokenizer.from_pretrained(model, padding_side="left")
 
 from vllm import LLM
 llm = LLM(model=model, revision=revision)
@@ -111,8 +109,8 @@ Although some of her works now belong to the classics of the Western tradition o
 Arendt’s political thought cannot, in this sense, be identified either with the liberal tradition or with the claims advanced by a number of its critics. Arendt did not conceive of politics as a means for the satisfaction of individual preferences, nor as a way to integrate individuals around a shared conception of the good. Her conception of politics is based instead on the idea of active citizenship, that is, on the value and importance of civic engagement and collective deliberation about all matters affecting the political community. If there is a tradition of thought with which Arendt can be identified, it is the classical tradition of civic republicanism originating in Aristotle and embodied in the writings of Machiavelli, Montesquieu, Jefferson, and Tocqueville. According to this tradition politics finds its authentic expression whenever citizens gather together in a public space to deliberate and decide about matters of collective concern. Political activity is valued not because it may lead to agreement or to a shared conception of the good, but because it enables each citizen to exercise his or her powers of agency, to develop the capacities for judgment and to attain by concerted action some measure of political efficacy."""
 
 def get_num_tokens(text):
-    mistral_tokenizer = AutoTokenizer.from_pretrained("mosaicml/mpt-7b-8k-instruct", padding_side="left")
-    inputs = mistral_tokenizer(text, return_tensors="pt").input_ids.to("cuda")
+    tokenizer = AutoTokenizer.from_pretrained("mosaicml/mpt-7b-8k-instruct", padding_side="left")
+    inputs = tokenizer(text, return_tensors="pt").input_ids.to("cuda")
     return inputs.shape[1]
 
 print('number of tokens for input:', get_num_tokens(long_input))
