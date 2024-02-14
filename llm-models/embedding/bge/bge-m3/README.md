@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Example notebooks for the `bge-lm3` model on Databricks
+# Example notebooks for the `bge-m3` model on Databricks
 This folder contains the following examples for [bge-m3 model](https://huggingface.co/BAAI/bge-m3): 
 
 <!---
