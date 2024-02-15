@@ -27,7 +27,7 @@
 # COMMAND ----------
 
 # MAGIC %pip install -U  torch==2.0.1+cu118  torchvision==0.15.2+cu118  transformers==4.37.2  accelerate==0.26.1  einops==0.7.0  flash-attn==2.5.2 
-# MAGIC %pip install bitsandbytes==0.41.1 einops==0.7.0 trl==0.7.1 peft==0.5.0
+# MAGIC %pip install bitsandbytes==0.41.1 einops==0.7.0 trl==0.7.10 peft==0.5.0
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
