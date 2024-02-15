@@ -1,9 +1,24 @@
 *.class
 *.log
 
+distribute*
+.noseids
+*.pyc
+*.swp
+*egg-info*
+build/
+dist/
+.cache
+venv
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
 _SUCCESS
 .DS_Store
 .idea
+.vscode
 model-export-demo/target
 .fleet
 *.iml

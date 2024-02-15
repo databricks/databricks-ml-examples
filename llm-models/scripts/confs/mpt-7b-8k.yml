@@ -1,0 +1,17 @@
+model_family_name: mpt
+model_name: mpt-7b-8k
+base_model_name: mpt-7b-8k
+fine_tuned_model_name: mpt-7b-8k-instruct
+hf_org_name: mosaicml
+model_size: 7
+support_optimized_serving: true
+support_gradient_checkpointing: false
+support_vllm: true
+model_type: instruct
+pip_requirements:
+  - torch==2.0.1+cu118
+  - torchvision==0.15.2+cu118
+  - transformers==4.37.2
+  - accelerate==0.26.1
+  - einops==0.7.0
+  - flash-attn==2.5.2
