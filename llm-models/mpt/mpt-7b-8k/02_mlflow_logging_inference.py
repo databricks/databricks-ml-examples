@@ -10,7 +10,7 @@
 # MAGIC     - `g5.xlarge` on aws
 # MAGIC     - `Standard_NV36ads_A10_v5` on azure
 # MAGIC     - `g2-standard-4` on gcp
-
+# MAGIC
 
 # COMMAND ----------
 
@@ -22,7 +22,7 @@
 # MAGIC %pip install -U mlflow-skinny[databricks]>=2.6.0
 # MAGIC %pip install -U  torch==2.0.1+cu118  torchvision==0.15.2+cu118  transformers==4.37.2  accelerate==0.26.1  einops==0.7.0  flash-attn==2.5.2 
 # MAGIC %pip install --upgrade databricks-sdk
-
+# MAGIC
 # MAGIC dbutils.library.restartPython()
 
 # COMMAND ----------
@@ -66,6 +66,7 @@ def build_prompt(instruction):
 
 # COMMAND ----------
 
+# DBTITLE 1,Machine Learning Model Logger
 import mlflow
 from mlflow.models import infer_signature
 
@@ -143,26 +144,6 @@ client.set_registered_model_alias(name=registered_name, alias="Champion", versio
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Load the model from Unity Catalog
-
-# COMMAND ----------
-
-import mlflow
-
-loaded_model = mlflow.pyfunc.load_model(f"models:/{registered_name}@Champion")
-
-# Make a prediction using the loaded model
-loaded_model.predict(
-    {"prompt": "What is large language model?"},
-    params={
-        "temperature": 0.5,
-        "max_new_tokens": 100,
-    }
-)
-
-# COMMAND ----------
-
-# MAGIC %md
 # MAGIC ## Deploying the model to Model Serving
 # MAGIC Once the model is registered, we can use API to create a Databricks GPU Model Serving Endpoint that serves the `mpt-7b-8k-instruct` model.
 # MAGIC
@@ -179,6 +160,7 @@ served_name = f'{model_version.name.replace(".", "_")}_{model_version.version}'
 
 # COMMAND ----------
 
+# DBTITLE 1,Model Deployment Throughput Setter
 import requests
 import json
 
@@ -215,3 +197,7 @@ response = requests.post(
 )
 
 print(json.dumps(response.json(), indent=4))
+
+# COMMAND ----------
+
+
