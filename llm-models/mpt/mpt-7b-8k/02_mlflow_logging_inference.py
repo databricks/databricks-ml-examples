@@ -40,9 +40,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 
 # Load model
-model = AutoModelForCausalLM.from_pretrained(model_name, revision=revision, torch_dtype=torch.bfloat16,
+model = AutoModelForCausalLM.from_pretrained(model_name, revision=revision, torch_dtype=torch.bfloat16, trust_remote_code=True,
                                              cache_dir="/local_disk0/.cache/huggingface/")
-tokenizer = AutoTokenizer.from_pretrained(model_name, revision=revision)
+tokenizer = AutoTokenizer.from_pretrained(model_name, revision=revision, trust_remote_code=True)
 
 # COMMAND ----------
 
