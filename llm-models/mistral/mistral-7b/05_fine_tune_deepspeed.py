@@ -166,7 +166,7 @@ input_example=pd.DataFrame({
 with mlflow.start_run() as run:  
     mlflow.pyfunc.log_model(
         "model",
-        python_model=LlamaV2(),
+        python_model=Mistral7B(),
         artifacts={'repository' : "/dbfs/llm"},
         pip_requirements=[f"torch=={torch.__version__}", 
                           f"transformers=={transformers.__version__}", 
