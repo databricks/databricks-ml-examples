@@ -9,7 +9,7 @@
 # MAGIC
 # MAGIC Environment for this notebook:
 # MAGIC - Runtime: 14.0 GPU ML Runtime
-# MAGIC - Instance: `Standard_NC96ads_A100_v4` on Azure with 4 A100-80GB GPUs, `g5.24xlarge` on AWS with 4 A10-40GB GPUs
+# MAGIC - Instance: `Standard_NC96ads_A100_v4` on Azure with 4 A100-80GB GPUs, `g5.24xlarge` on AWS with 4 A10-24GB GPUs
 # MAGIC
 
 # COMMAND ----------
