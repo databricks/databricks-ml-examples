@@ -124,4 +124,5 @@ vector_store = FAISS.from_texts(
 
 # COMMAND ----------
 
+# Update the following path to point to a UC Volumes location if DBFS is not available
 vector_store.save_local(folder_path="/dbfs/peft-doc-embed/vector_store")

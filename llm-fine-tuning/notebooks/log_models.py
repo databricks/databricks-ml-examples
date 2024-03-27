@@ -43,6 +43,7 @@ logging.getLogger("sh.command").setLevel(logging.ERROR)
 
 from databricks_llm.notebook_utils import get_dbutils
 
+# Update the following widget to point to a UC Volumes location if DBFS is not available
 get_dbutils().widgets.text("dbfs_model_location", "/dbfs/llm/", "dbfs_model_location")
 get_dbutils().widgets.text("model_name", "my_llm", "model_name")
 

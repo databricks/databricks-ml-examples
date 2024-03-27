@@ -229,7 +229,7 @@ def train(
 @click.command()
 @click.option("--input-model", type=str, help="Input model to fine tune", default=MODEL_PATH)
 @click.option("--local-output-dir", type=str, help="Write directly to this local path", default=LOCAL_OUTPUT_DIR)
-@click.option("--dbfs-output-dir", type=str, help="Sync data to this path on DBFS")
+@click.option("--dbfs-output-dir", type=str, help="Sync data to this path on DBFS. Update this to a UC Volumes path if DBFS is not available.")
 @click.option("--epochs", type=int, default=1, help="Number of epochs to train for.")
 @click.option("--per-device-train-batch-size", type=int, default=1, help="Batch size to use for training.")
 @click.option("--per-device-eval-batch-size", type=int, default=1, help="Batch size to use for evaluation.")

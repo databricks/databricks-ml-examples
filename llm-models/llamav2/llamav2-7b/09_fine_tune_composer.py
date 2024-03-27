@@ -63,6 +63,8 @@ NUM_GPUS = 4  # number of gpus in this node
 # COMMAND ----------
 
 COMPOSER_CHECKPOINT_PATH = "/local_disk0/composer-llama-2-7b-fine-tune/checkpoints/latest-rank0.pt"
+# Update the following path to point to a UC Volumes location if DBFS is not available
+# Make sure to change all related paths in the notebook 
 HF_CHECKPOINT_PATH = "/dbfs/composer-llama-2-7b-fine-tune/"
 
 !python scripts/convert_composer_to_hf.py \

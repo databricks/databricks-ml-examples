@@ -171,6 +171,7 @@ def load_training_dataset(
   path_or_dataset: str = DEFAULT_TRAINING_DATASET,
 ) -> Dataset:
   print(f"Loading dataset from {path_or_dataset}")
+  # Update the following path to point to a UC Volumes location if DBFS is not available
   dataset = load_dataset(path_or_dataset, cache_dir='/dbfs/llama2-deepspeed')["train"]
   print(f"Found {dataset.num_rows} rows")
 
@@ -349,6 +350,7 @@ from transformers import AutoTokenizer
 import transformers
 import torch
 
+# Update the following path to point to a UC Volumes location if DBFS is not available
 LOCAL_OUTPUT_DIR = "/dbfs/llama-2-fine-tune/output"
 tokenizer = AutoTokenizer.from_pretrained(LOCAL_OUTPUT_DIR)
 tokenizer.pad_token = tokenizer.eos_token

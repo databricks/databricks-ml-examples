@@ -258,6 +258,7 @@ trainer.train()
 
 # COMMAND ----------
 
+# Update the following path to point to a UC Volumes location if DBFS is not available
 trainer.save_model("/dbfs/falcon-40b-fine-tune")
 
 # COMMAND ----------
@@ -281,6 +282,7 @@ import torch
 from peft import PeftModel, PeftConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
+# Update the following path to point to a UC Volumes location if DBFS is not available
 peft_model_id = "/dbfs/falcon-40b-fine-tune"
 config = PeftConfig.from_pretrained(peft_model_id)
 

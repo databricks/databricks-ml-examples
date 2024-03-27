@@ -53,6 +53,8 @@ notebook_login()
 
 # COMMAND ----------
 
+# Update any paths that point to DBFS to instead point to UC Volumes (for instance, final_model_output_path) 
+# Make sure to update all instances of the modified path in the notebook 
 !deepspeed \
 --num_gpus=8 \
 scripts/fine_tune_deepspeed.py \
@@ -188,7 +190,7 @@ with mlflow.start_run() as run:
     mlflow.pyfunc.log_model(
         "model",
         python_model=LlamaV2(),
-        artifacts={'repository' : "/dbfs/llm/llama2-13b-fine-tune/"},
+        artifacts={'repository' : "/dbfs/llm/llama2-13b-fine-tune/"}, 
         pip_requirements=[f"torch=={torch_version}", 
                           f"transformers=={transformers.__version__}", 
                           f"accelerate=={accelerate.__version__}", "einops", "sentencepiece"],
