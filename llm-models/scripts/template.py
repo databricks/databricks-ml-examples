@@ -21,5 +21,8 @@ class TemplateManager:
         return template.render(**kwargs)
 
     def dump_template(self, template_name, outout_file, **kwargs):
+        import os
+        print("template dir", os.getcwd())
+        print("template name", template_name)
         template = self.get_template(template_name)
         return template.stream(**kwargs).dump(outout_file)

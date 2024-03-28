@@ -221,6 +221,9 @@ def generate_example_notebook(
         model_size = model_info_dict["model_size"] if model_info_dict["model_size"] else model_manifest["model_size"]
         if should_generate_example(file_name, overwrite):
             _logger.info(f"Generating {example}")
+            current_directory = os.getcwd()
+            # Print the current working directory
+            print(current_directory)
             template_manager.dump_template(
                 f"text_generation/{example}.jinja",
                 file_name,

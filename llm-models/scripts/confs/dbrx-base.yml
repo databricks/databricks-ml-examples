@@ -1,0 +1,16 @@
+model_family_name: dbrx
+model_name: dbrx-base
+base_model_name: dbrx-base
+fine_tuned_model_name: dbrx-instruct
+hf_org_name: databricks
+model_size: 132
+support_optimized_serving: true
+support_gradient_checkpointing: false
+support_vllm: true
+pip_requirements:
+  - torch==2.2.1
+  - torchvision==0.17.2
+  - transformers==4.38.2
+  - accelerate==0.26.1
+  - einops==0.7.0
+  - flash-attn==2.5.2
